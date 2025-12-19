@@ -3,18 +3,19 @@
  * db.from('flowers').select('*').eq('type', 'roses').order('name')
  */
 class QueryBuilder {
-  constructor(sheetsConnector) {
-    this.connector = sheetsConnector
-    
+  constructor(sheetsConnector, cacheManager = null) {
+    this.connector = sheetsConnector;
+    this.cache = cacheManager; //ahora recibe el cache manager
+
     // Estado inicial de la query
     this.query = {
-      table: null,           // Nombre de la tabla
-      columns: ['*'],        // Columnas a seleccionar
-      filters: [],           // Filtros WHERE
-      orderBy: null,         // Ordenamiento
-      orderDirection: 'asc', // Dirección del orden
-      limitValue: null       // Límite de resultados
-    }
+      table: null, // Nombre de la tabla
+      columns: ["*"], // Columnas a seleccionar
+      filters: [], // Filtros WHERE
+      orderBy: null, // Ordenamiento
+      orderDirection: "asc", // Dirección del orden
+      limitValue: null, // Límite de resultados
+    };
   }
 
   /**
@@ -23,23 +24,23 @@ class QueryBuilder {
    * @returns {QueryBuilder} - Retorna this para encadenamiento
    */
   from(tableName) {
-    this.query.table = tableName
-    return this // ← Permite encadenar: .from('x').select('y')
+    this.query.table = tableName;
+    return this; // Permite encadenar: .from('x').select('y')
   }
   /**
    * Especifica que columnas seleccionar
    * @param {string} columns - columnas separadas por coma: 'name, country' o '*'
    * @returns {QueryBuilder}
    */
-  select(columns = '*') {
-    if (columns === '*') {
-      this.query.columns = ['*']
+  select(columns = "*") {
+    if (columns === "*") {
+      this.query.columns = ["*"];
     } else {
       this.query.columns = columns
-        .split(',') //dividir columns 
-        .map(col => col.trim())
+        .split(",") //dividir columns
+        .map((col) => col.trim());
     }
-    return this
+    return this;
   }
 
   /**
@@ -51,10 +52,10 @@ class QueryBuilder {
   eq(field, value) {
     this.query.filters.push({
       field,
-      operator: 'eq',
-      value
-    })
-    return this
+      operator: "eq",
+      value,
+    });
+    return this;
   }
 
   /**
@@ -66,12 +67,11 @@ class QueryBuilder {
   neq(field, value) {
     this.query.filters.push({
       field,
-      operator: 'neq',
-      value
-    })
-    return this
+      operator: "neq",
+      value,
+    });
+    return this;
   }
-
 
   /**
    * gt: greater than
@@ -83,12 +83,11 @@ class QueryBuilder {
   gt(field, value) {
     this.query.filters.push({
       field,
-      operator: 'gt',
-      value
-    })
-    return this
+      operator: "gt",
+      value,
+    });
+    return this;
   }
-
 
   /**
    * gte: greater than or equal
@@ -100,12 +99,11 @@ class QueryBuilder {
   gte(field, value) {
     this.query.filters.push({
       field,
-      operator: 'gte',
-      value
-    })
-    return this
+      operator: "gte",
+      value,
+    });
+    return this;
   }
-
 
   /**
    * lt: less than
@@ -117,12 +115,11 @@ class QueryBuilder {
   lt(field, value) {
     this.query.filters.push({
       field,
-      operator: 'lt',
-      value
-    })
-    return this
+      operator: "lt",
+      value,
+    });
+    return this;
   }
-
 
   /**
    * lte: less than or equal
@@ -134,12 +131,11 @@ class QueryBuilder {
   lte(field, value) {
     this.query.filters.push({
       field,
-      operator: 'lte',
-      value
-    })
-    return this
+      operator: "lte",
+      value,
+    });
+    return this;
   }
-
 
   /**
    * Filtro, campo contiene texto
@@ -150,10 +146,10 @@ class QueryBuilder {
   like(field, pattern) {
     this.query.filters.push({
       field,
-      operator: 'like',
-      value: pattern
-    })
-    return this
+      operator: "like",
+      value: pattern,
+    });
+    return this;
   }
 
   /**
@@ -162,10 +158,10 @@ class QueryBuilder {
    * @param {string} direction - 'asc' o 'desc'
    * @returns {QueryBuilder}
    */
-  order(field, direction = 'asc') {
-    this.query.orderBy = field
-    this.query.orderDirection = direction.toLowerCase()
-    return this
+  order(field, direction = "asc") {
+    this.query.orderBy = field;
+    this.query.orderDirection = direction.toLowerCase();
+    return this;
   }
 
   /**
@@ -174,8 +170,8 @@ class QueryBuilder {
    * @returns {QueryBuilder}
    */
   limit(count) {
-    this.query.limitValue = count
-    return this
+    this.query.limitValue = count;
+    return this;
   }
 
   /**
@@ -183,21 +179,43 @@ class QueryBuilder {
    * @returns {Promise<Array>} - Array de registros
    */
   async execute() {
-    console.log('🔍 Ejecutando query:', JSON.stringify(this.query, null, 2))
+    console.log("Ejecutando query:", JSON.stringify(this.query, null, 2));
 
-    //validar que se especificó una tabla
+    //validar que se especifico una tabla
     if (!this.query.table) {
-      throw new Error('Debes especificar una tabla con .from()')
+      throw new Error("Debes especificar una tabla con .from()");
     }
-    let data = await this.connector.readSheet(this.query.table) //obtener los datos de la tabla
 
-    data = this.applyFilters(data)
-    data = this.applySelect(data)
-    data = this.applyOrder(data)
-    data = this.applyLimit(data)
+    //Intentar obtener el cache
+    if (this.cache) {
+      const cacheKey = this.cache.generateKey(this.query.table, this.query);
+      const cachedData = this.cache.get(cacheKey);
 
-    console.log(`Se ejecuto correctamente: ${data.length} resultados`)
-    return data
+      if (cachedData !== undefined) {
+        console.log(
+          `La Querie se ejecuto desde el cache: ${cachedData.length} resultados`
+        );
+        return cachedData;
+      }
+    }
+
+    let data = await this.connector.readSheet(this.query.table); //obtener los datos de la tabla
+
+    data = this.applyFilters(data);
+    data = this.applySelect(data);
+    data = this.applyOrder(data);
+    data = this.applyLimit(data);
+
+
+    //Guardar en el cache
+    if (this.cache) {
+      const cacheKey = this.cache.generateKey(this.query.table, this.query);
+      this.cache.set(cacheKey, data);
+      console.log(`Resultados guardados en cache`);
+    }
+
+    console.log(`Query ejecutada correctamente: ${data.length} resultados`);
+    return data;
   }
 
   /**
@@ -207,44 +225,44 @@ class QueryBuilder {
    */
   applyFilters(data) {
     if (this.query.filters.length === 0) {
-      return data
+      return data;
     }
 
-    return data.filter(record => {
-      return this.query.filters.every(filter => {
-        const fieldValue = record[filter.field]
-        const filterValue = filter.value
+    return data.filter((record) => {
+      return this.query.filters.every((filter) => {
+        const fieldValue = record[filter.field];
+        const filterValue = filter.value;
 
         switch (filter.operator) {
-          case 'eq':
-            return fieldValue == filterValue // == permite '1' == 1
+          case "eq":
+            return fieldValue == filterValue; // == permite '1' == 1
 
-          case 'neq':
-            return fieldValue != filterValue
+          case "neq":
+            return fieldValue != filterValue;
 
-          case 'gt':
-            return Number(fieldValue) > Number(filterValue)
+          case "gt":
+            return Number(fieldValue) > Number(filterValue);
 
-          case 'gte':
-            return Number(fieldValue) >= Number(filterValue)
+          case "gte":
+            return Number(fieldValue) >= Number(filterValue);
 
-          case 'lt':
-            return Number(fieldValue) < Number(filterValue)
+          case "lt":
+            return Number(fieldValue) < Number(filterValue);
 
-          case 'lte':
-            return Number(fieldValue) <= Number(filterValue)
+          case "lte":
+            return Number(fieldValue) <= Number(filterValue);
 
-          case 'like':
-            const field = String(fieldValue).toLowerCase()
-            const pattern = String(filterValue).toLowerCase()
-            return field.includes(pattern)
+          case "like":
+            const field = String(fieldValue).toLowerCase();
+            const pattern = String(filterValue).toLowerCase();
+            return field.includes(pattern);
 
           default:
-            console.warn(`⚠️  Operador desconocido: ${filter.operator}`)
-            return true
+            console.warn(`Operador desconocido: ${filter.operator}`);
+            return true;
         }
-      })
-    })
+      });
+    });
   }
 
   /**
@@ -253,17 +271,17 @@ class QueryBuilder {
    * @returns {Array} - Datos con columnas seleccionadas
    */
   applySelect(data) {
-    if (this.query.columns.includes('*')) {
-      return data
+    if (this.query.columns.includes("*")) {
+      return data;
     }
 
-    return data.map(record => {
-      const selected = {}
-      this.query.columns.forEach(col => {
-        selected[col] = record[col]
-      })
-      return selected
-    })
+    return data.map((record) => {
+      const selected = {};
+      this.query.columns.forEach((col) => {
+        selected[col] = record[col];
+      });
+      return selected;
+    });
   }
 
   /**
@@ -273,28 +291,28 @@ class QueryBuilder {
    */
   applyOrder(data) {
     if (!this.query.orderBy) {
-      return data
+      return data;
     }
 
-    const field = this.query.orderBy
-    const direction = this.query.orderDirection
+    const field = this.query.orderBy;
+    const direction = this.query.orderDirection;
 
     return [...data].sort((a, b) => {
-      const aVal = a[field]
-      const bVal = b[field]
-      const aNum = Number(aVal)
-      const bNum = Number(bVal)
+      const aVal = a[field];
+      const bVal = b[field];
+      const aNum = Number(aVal);
+      const bNum = Number(bVal);
 
-      let comparison = 0
+      let comparison = 0;
 
       if (!isNaN(aNum) && !isNaN(bNum)) {
-        comparison = aNum - bNum
+        comparison = aNum - bNum;
       } else {
-        comparison = String(aVal).localeCompare(String(bVal))
+        comparison = String(aVal).localeCompare(String(bVal));
       }
 
-      return direction === 'desc' ? -comparison : comparison
-    })
+      return direction === "desc" ? -comparison : comparison;
+    });
   }
 
   /**
@@ -304,11 +322,11 @@ class QueryBuilder {
    */
   applyLimit(data) {
     if (!this.query.limitValue) {
-      return data
+      return data;
     }
 
-    return data.slice(0, this.query.limitValue)
+    return data.slice(0, this.query.limitValue);
   }
 }
 
-export default QueryBuilder
+export default QueryBuilder;
