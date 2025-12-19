@@ -3,12 +3,23 @@ import cors from 'cors'
 import dotenv from 'dotenv'
 import SheetsConnector from './core/SheetsConnector.js'
 import queryRoutes from './routes/query.js'
+import CacheManager from './core/Cache.js'
+
+// Inicializar cache
+const cacheManager = new CacheManager({
+  ttl: 300,      // 5 minutos
+  enabled: true
+})
+
 
 // Cargar variables de entorno
 dotenv.config()
 
 const app = express()
 const PORT = process.env.PORT || 3000
+
+//guardar en app.locals
+app.locals.cacheManager = cacheManager
 
 const sheetsConnector = new SheetsConnector(
   process.env.GOOGLE_SERVICE_ACCOUNT_FILE,
