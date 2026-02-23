@@ -1,14 +1,20 @@
 {
-  "name": "sheetsbase-coffee-shop-example",
+  "name": "sheetsbase-coffee-shop-demo",
   "version": "1.0.0",
   "type": "module",
-  "description": "Coffee shop dashboard example using SheetsBase",
+  "description": "Coffee shop dashboard demo using SheetsBase",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
     "express": "^4.18.2",
     "cors": "^2.8.5",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "googleapis": "^128.0.0",
+    "node-cache": "^5.1.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
   }
 }
