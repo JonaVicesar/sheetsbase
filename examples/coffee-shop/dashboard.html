@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coffee Shop Dashboard - SheetsBase Demo</title>
+  <style>
+    /* (Mantén todos los estilos igual que antes) */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+      background: #fafafa;
+      color: #2d3748;
+      line-height: 1.6;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 40px;
+      padding: 30px 0;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    h1 {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      color: #718096;
+      font-size: 14px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+
+    .stat-card {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #718096;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 600;
+      color: #1a202c;
+    }
+
+    .section {
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: #1a202c;
+    }
+
+    .menu-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 16px;
+    }
+
+    .product-card {
+      padding: 16px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      transition: all 0.2s;
+    }
+
+    .product-card:hover {
+      border-color: #cbd5e0;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      transform: translateY(-2px);
+    }
+
+    .product-name {
+      font-weight: 600;
+      margin-bottom: 4px;
+      color: #1a202c;
+    }
+
+    .product-price {
+      font-size: 18px;
+      font-weight: 600;
+      color: #2d3748;
+    }
+
+    .product-time {
+      font-size: 12px;
+      color: #718096;
+      margin-top: 4px;
+    }
+
+    .orders-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .order-card {
+      padding: 16px;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .order-id {
+      font-family: monospace;
+      font-size: 12px;
+      color: #718096;
+    }
+
+    .order-customer {
+      font-weight: 500;
+    }
+
+    .status-badge {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .status-completed { background: #c6f6d5; color: #22543d; }
+    .status-preparing { background: #feebc8; color: #7c2d12; }
+    .status-pending { background: #e2e8f0; color: #2d3748; }
+    .status-ready { background: #bee3f8; color: #2c5282; }
+
+    .order-total {
+      font-weight: 600;
+      color: #1a202c;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: #718096;
+    }
+
+    .error {
+      background: #fed7d7;
+      color: #742a2a;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .refresh-btn {
+      background: #2d3748;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .refresh-btn:hover {
+      background: #1a202c;
+      transform: translateY(-1px);
+    }
+
+    .cache-info {
+      background: #f7fafc;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      color: #4a5568;
+      margin-top: 16px;
+    }
+
+    .success {
+      background: #c6f6d5;
+      color: #22543d;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .actions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+
+    .action-btn {
+      background: white;
+      border: 2px solid #2d3748;
+      color: #2d3748;
+      padding: 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 600;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .action-btn:hover {
+      background: #2d3748;
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 32px;
+      border-radius: 12px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal-content h3 {
+      margin-bottom: 20px;
+      font-size: 20px;
+    }
+
+    .modal-content form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .modal-content label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #2d3748;
+      margin-bottom: -8px;
+    }
+
+    .modal-content input,
+    .modal-content select {
+      padding: 10px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .modal-content input:focus,
+    .modal-content select:focus {
+      outline: none;
+      border-color: #2d3748;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .modal-actions button {
+      flex: 1;
+      padding: 12px;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .modal-actions button[type="button"] {
+      background: #e2e8f0;
+      color: #2d3748;
+    }
+
+    .modal-actions button[type="button"]:hover {
+      background: #cbd5e0;
+    }
+
+    .modal-actions .btn-primary {
+      background: #2d3748;
+      color: white;
+    }
+
+    .modal-actions .btn-primary:hover {
+      background: #1a202c;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>☕ Coffee Shop Dashboard</h1>
+      <p class="subtitle">Powered by SheetsBase - Google Sheets as a Database</p>
+    </header>
+
+    <div id="error" class="error" style="display: none;"></div>
+    <div id="success" class="success" style="display: none;"></div>
+
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-label">Available Products</div>
+        <div class="stat-value" id="total-products">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Today's Orders</div>
+        <div class="stat-value" id="total-orders">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Today's Sales</div>
+        <div class="stat-value" id="total-sales">-</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Active Orders</div>
+        <div class="stat-value" id="active-orders">-</div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="section">
+      <h2 class="section-title">⚡ Quick Actions</h2>
+      <div class="actions-grid">
+        <button class="action-btn" onclick="showCreateOrderModal()">
+          📦 Create Order
+        </button>
+        <button class="action-btn" onclick="showAddProductModal()">
+          ➕ Add Product
+        </button>
+        <button class="action-btn" onclick="showAddCustomerModal()">
+          👤 New Customer
+        </button>
+        <button class="action-btn" onclick="clearCache()">
+          🗑️ Clear Cache
+        </button>
+        <button class="action-btn" onclick="loadData()">
+          🔄 Reload All
+        </button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2 class="section-title">📋 Available Menu</h2>
+      <div id="menu" class="menu-grid">
+        <div class="loading">Loading menu...</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2 class="section-title">📦 Today's Orders</h2>
+      <div id="orders" class="orders-list">
+        <div class="loading">Loading orders...</div>
+      </div>
+    </div>
+
+    <div class="cache-info" id="cache-info">
+      Cache: -
+    </div>
+
+    <!-- Modal for creating order -->
+    <div id="orderModal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <h3>Create New Order</h3>
+        <form id="orderForm">
+          <label>Customer:</label>
+          <select id="orderCustomer" required>
+            <option value="">Loading customers...</option>
+          </select>
+
+          <label>Product:</label>
+          <select id="orderProduct" required>
+            <option value="">Select product</option>
+          </select>
+
+          <label>Quantity:</label>
+          <input type="number" id="orderQuantity" min="1" value="1" required>
+
+          <label>Payment Method:</label>
+          <select id="orderPayment" required>
+            <option value="cash">Cash</option>
+            <option value="card">Card</option>
+            <option value="transfer">Transfer</option>
+          </select>
+
+          <label>Notes (optional):</label>
+          <input type="text" id="orderNotes" placeholder="E.g., No sugar">
+
+          <div class="modal-actions">
+            <button type="button" onclick="closeModal('orderModal')">Cancel</button>
+            <button type="submit" class="btn-primary">Create Order</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal for adding product -->
+    <div id="productModal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <h3>Add Product</h3>
+        <form id="productForm">
+          <label>Name:</label>
+          <input type="text" id="productName" placeholder="E.g., Espresso" required>
+
+          <label>Category:</label>
+          <select id="productCategory" required>
+            <option value="">Loading categories...</option>
+          </select>
+
+          <label>Price (₲):</label>
+          <input type="number" id="productPrice" min="0" placeholder="3500" required>
+
+          <label>Preparation time (min):</label>
+          <input type="number" id="productTime" min="1" value="5" required>
+
+          <div class="modal-actions">
+            <button type="button" onclick="closeModal('productModal')">Cancel</button>
+            <button type="submit" class="btn-primary">Add</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal for adding customer -->
+    <div id="customerModal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <h3>New Customer</h3>
+        <form id="customerForm">
+          <label>Name:</label>
+          <input type="text" id="customerName" placeholder="John Doe" required>
+
+          <label>Phone:</label>
+          <input type="tel" id="customerPhone" placeholder="+595981234567" required>
+
+          <label>Email:</label>
+          <input type="email" id="customerEmail" placeholder="john@email.com" required>
+
+          <label>Address:</label>
+          <input type="text" id="customerAddress" placeholder="Av. España 1234">
+
+          <div class="modal-actions">
+            <button type="button" onclick="closeModal('customerModal')">Cancel</button>
+            <button type="submit" class="btn-primary">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:3000'
+
+    async function query(table, filters = [], select = '*') {
+      const response = await fetch(`${API_URL}/api/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table, select, filters })
+      })
+      
+      if (!response.ok) throw new Error(`Error: ${response.statusText}`)
+      return await response.json()
+    }
+
+    async function insert(table, data) {
+      const response = await fetch(`${API_URL}/api/insert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table, data })
+      })
+      
+      if (!response.ok) throw new Error(`Error: ${response.statusText}`)
+      return await response.json()
+    }
+
+    async function loadMenu() {
+      try {
+        const result = await query('products')
+        const menu = document.getElementById('menu')
+        
+        const availableProducts = result.data.filter(p => 
+          p.available && (p.available.toLowerCase() === 'true' || p.available === '1')
+        )
+        
+        if (availableProducts.length === 0) {
+          menu.innerHTML = '<p style="color: #718096;">No products available</p>'
+          document.getElementById('total-products').textContent = '0'
+          return
+        }
+
+        menu.innerHTML = availableProducts.map(product => `
+          <div class="product-card">
+            <div class="product-name">${product.name}</div>
+            <div class="product-price">₲${parseInt(product.price).toLocaleString()}</div>
+            <div class="product-time">⏱️ ${product.preparation_time} min</div>
+          </div>
+        `).join('')
+
+        document.getElementById('total-products').textContent = availableProducts.length
+
+      } catch (error) {
+        showError('Error loading menu: ' + error.message)
+      }
+    }
+
+    async function loadOrders() {
+      try {
+        // Obtener TODAS las órdenes primero (sin filtro de fecha)
+        const result = await query('orders')
+        
+        console.log('All orders:', result.data) // Para debugging
+
+        const ordersDiv = document.getElementById('orders')
+        
+        if (result.data.length === 0) {
+          ordersDiv.innerHTML = '<p style="color: #718096;">No orders found</p>'
+          document.getElementById('total-orders').textContent = '0'
+          document.getElementById('total-sales').textContent = '₲0'
+          document.getElementById('active-orders').textContent = '0'
+          return
+        }
+
+        // Get today's date in YYYY-MM-DD format
+        const today = new Date()
+        const todayStr = today.toISOString().split('T')[0]
+        
+        console.log('Today\'s date:', todayStr) // Para debugging
+
+        // Filter orders for today manually
+        const todayOrders = result.data.filter(order => {
+          if (!order.order_date) return false
+          
+          // Try to extract date from order_date (handle different formats)
+          let orderDateStr = order.order_date
+          
+          // If it includes time, split to get just the date part
+          if (orderDateStr.includes(' ')) {
+            orderDateStr = orderDateStr.split(' ')[0]
+          } else if (orderDateStr.includes('T')) {
+            orderDateStr = orderDateStr.split('T')[0]
+          }
+          
+          console.log(`Order ${order.id} date:`, orderDateStr, 'vs today:', todayStr) // Para debugging
+          
+          return orderDateStr === todayStr
+        })
+
+        console.log('Today\'s orders:', todayOrders) // Para debugging
+
+        // Get customer names for better display
+        const customers = await query('customers')
+        const customerMap = {}
+        customers.data.forEach(c => {
+          customerMap[c.id] = c.name
+        })
+
+        // Filter completed orders from today's orders
+        const completed = todayOrders.filter(o => o.status && o.status.toLowerCase() === 'completed')
+        const active = todayOrders.filter(o => o.status && (o.status.toLowerCase() === 'preparing' || o.status.toLowerCase() === 'pending'))
+        
+        console.log('Completed orders today:', completed) // Para debugging
+
+        // Calculate total sales from today's completed orders
+        let totalSales = 0
+        completed.forEach(order => {
+          if (order.total) {
+            // Handle different possible formats of total
+            let totalValue = order.total
+            if (typeof totalValue === 'string') {
+              // Remove currency symbol and any non-numeric characters except decimal point
+              totalValue = totalValue.replace(/[^0-9.-]/g, '')
+            }
+            const totalNum = parseFloat(totalValue)
+            if (!isNaN(totalNum)) {
+              totalSales += totalNum
+              console.log(`Order ${order.id} total: ${totalNum}, running total: ${totalSales}`) // Para debugging
+            }
+          }
+        })
+
+        document.getElementById('total-orders').textContent = todayOrders.length
+        document.getElementById('total-sales').textContent = '₲' + totalSales.toLocaleString()
+        document.getElementById('active-orders').textContent = active.length
+
+        if (todayOrders.length === 0) {
+          ordersDiv.innerHTML = '<p style="color: #718096;">No orders today</p>'
+          return
+        }
+
+        ordersDiv.innerHTML = todayOrders.map(order => {
+          const customerName = customerMap[order.customer_id] || `Customer ID: ${order.customer_id}`
+          let orderTotal = order.total
+          if (orderTotal) {
+            if (typeof orderTotal === 'string') {
+              orderTotal = orderTotal.replace(/[^0-9.-]/g, '')
+            }
+            orderTotal = parseFloat(orderTotal).toLocaleString()
+          } else {
+            orderTotal = '0'
+          }
+          
+          return `
+            <div class="order-card">
+              <div class="order-id">#${order.id}</div>
+              <div class="order-customer">${customerName}</div>
+              <div class="status-badge status-${order.status ? order.status.toLowerCase() : 'pending'}">${order.status || 'pending'}</div>
+              <div class="order-total">₲${orderTotal}</div>
+            </div>
+          `
+        }).join('')
+
+      } catch (error) {
+        showError('Error loading orders: ' + error.message)
+        console.error('Detailed error:', error)
+      }
+    }
+
+    async function loadCacheStats() {
+      try {
+        const response = await fetch(`${API_URL}/api/cache/stats`)
+        const result = await response.json()
+        
+        if (result.success) {
+          document.getElementById('cache-info').textContent = 
+            `Cache: ${result.stats.hits} hits, ${result.stats.misses} misses (${result.stats.hitRate} hit rate) - ${result.stats.currentKeys} keys`
+        }
+      } catch (error) {
+        console.log('Cache stats not available')
+      }
+    }
+
+    function showError(message) {
+      const errorDiv = document.getElementById('error')
+      errorDiv.textContent = message
+      errorDiv.style.display = 'block'
+      setTimeout(() => { errorDiv.style.display = 'none' }, 5000)
+    }
+
+    function showSuccess(message) {
+      const successDiv = document.getElementById('success')
+      successDiv.textContent = message
+      successDiv.style.display = 'block'
+      setTimeout(() => { successDiv.style.display = 'none' }, 3000)
+    }
+
+    async function loadData() {
+      await Promise.all([loadMenu(), loadOrders(), loadCacheStats()])
+    }
+
+    async function clearCache() {
+      try {
+        const response = await fetch(`${API_URL}/api/cache/clear`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        })
+        
+        const result = await response.json()
+        
+        if (result.success) {
+          showSuccess('Cache cleared! Reloading data...')
+          await loadData()
+        }
+      } catch (error) {
+        showError('Error clearing cache: ' + error.message)
+      }
+    }
+
+    // === MODALS ===
+
+    async function showCreateOrderModal() {
+      document.getElementById('orderModal').style.display = 'flex'
+      
+      // Load customers
+      const customers = await query('customers')
+      const customerSelect = document.getElementById('orderCustomer')
+      customerSelect.innerHTML = '<option value="">Select customer</option>' +
+        customers.data.map(c => `<option value="${c.id}">${c.name}</option>`).join('')
+      
+      // Load products - filter available ones manually
+      const allProducts = await query('products')
+      const availableProducts = allProducts.data.filter(p => 
+        p.available && (p.available.toLowerCase() === 'true' || p.available === '1')
+      )
+      const productSelect = document.getElementById('orderProduct')
+      productSelect.innerHTML = '<option value="">Select product</option>' +
+        availableProducts.map(p => `<option value="${p.id}" data-price="${p.price}">${p.name} (₲${parseInt(p.price).toLocaleString()})</option>`).join('')
+    }
+
+    async function showAddProductModal() {
+      document.getElementById('productModal').style.display = 'flex'
+      
+      // Load categories
+      const categories = await query('categories')
+      const categorySelect = document.getElementById('productCategory')
+      categorySelect.innerHTML = '<option value="">Select category</option>' +
+        categories.data.map(c => `<option value="${c.id}">${c.name}</option>`).join('')
+    }
+
+    function showAddCustomerModal() {
+      document.getElementById('customerModal').style.display = 'flex'
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).style.display = 'none'
+    }
+
+    // === FORMS ===
+
+    document.getElementById('orderForm').addEventListener('submit', async (e) => {
+      e.preventDefault()
+      
+      try {
+        const customerId = document.getElementById('orderCustomer').value
+        const productId = document.getElementById('orderProduct').value
+        const quantity = parseInt(document.getElementById('orderQuantity').value)
+        const payment = document.getElementById('orderPayment').value
+        const notes = document.getElementById('orderNotes').value
+
+        // Get product price
+        const productSelect = document.getElementById('orderProduct')
+        const price = parseInt(productSelect.selectedOptions[0].dataset.price)
+        const total = price * quantity
+
+        // Create order
+        const orderData = {
+          customer_id: customerId,
+          order_date: new Date().toISOString().slice(0, 16).replace('T', ' '),
+          status: 'pending',
+          total: total.toString(),
+          payment_method: payment,
+          notes: notes
+        }
+
+        const orderResult = await insert('orders', orderData)
+        const orderId = orderResult.data.id
+
+        // Create order_item
+        await insert('order_items', {
+          order_id: orderId,
+          product_id: productId,
+          quantity: quantity.toString(),
+          unit_price: price.toString(),
+          subtotal: total.toString(),
+          notes: ''
+        })
+
+        showSuccess(`Order #${orderId} created! Total: ₲${total.toLocaleString()}`)
+        closeModal('orderModal')
+        document.getElementById('orderForm').reset()
+        loadData()
+
+      } catch (error) {
+        showError('Error creating order: ' + error.message)
+      }
+    })
+
+    document.getElementById('productForm').addEventListener('submit', async (e) => {
+      e.preventDefault()
+      
+      try {
+        const productData = {
+          name: document.getElementById('productName').value,
+          category_id: document.getElementById('productCategory').value,
+          price: document.getElementById('productPrice').value,
+          available: 'TRUE',
+          preparation_time: document.getElementById('productTime').value
+        }
+
+        const result = await insert('products', productData)
+        
+        showSuccess(`Product "${productData.name}" added!`)
+        closeModal('productModal')
+        document.getElementById('productForm').reset()
+        loadData()
+
+      } catch (error) {
+        showError('Error adding product: ' + error.message)
+      }
+    })
+
+    document.getElementById('customerForm').addEventListener('submit', async (e) => {
+      e.preventDefault()
+      
+      try {
+        const customerData = {
+          name: document.getElementById('customerName').value,
+          phone: document.getElementById('customerPhone').value,
+          email: document.getElementById('customerEmail').value,
+          address: document.getElementById('customerAddress').value,
+          total_orders: '0'
+        }
+
+        const result = await insert('customers', customerData)
+        
+        showSuccess(`Customer "${customerData.name}" registered!`)
+        closeModal('customerModal')
+        document.getElementById('customerForm').reset()
+        loadData()
+
+      } catch (error) {
+        showError('Error registering customer: ' + error.message)
+      }
+    })
+
+    // Initial load
+    loadData()
+
+    // Reload every 30 seconds
+    setInterval(loadData, 30000)
+  </script>
+</body>
+</html>
