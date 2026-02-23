@@ -9,6 +9,14 @@ import SheetsConnector from '../../packages/server/src/core/SheetsConnector.js'
 import CacheManager from '../../packages/server/src/core/Cache.js'
 import queryRoutes from '../../packages/server/src/routes/query.js'
 
+console.log('===========================================')
+console.log('Starting Coffee Shop Server...')
+console.log('NODE_ENV:', process.env.NODE_ENV)
+console.log('PORT:', process.env.PORT)
+console.log('SPREADSHEET_ID:', process.env.SPREADSHEET_ID ? 'SET' : 'MISSING')
+console.log('GOOGLE_SERVICE_ACCOUNT_FILE:', process.env.GOOGLE_SERVICE_ACCOUNT_FILE)
+console.log('===========================================')
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 dotenv.config()
@@ -65,6 +73,8 @@ app.use((err, req, res, next) => {
   console.error('Error:', err)
   res.status(500).json({ error: 'Error en el servidor', message: err.message })
 })
+
+console.log('About to start server on port:', PORT)
 
 app.listen(PORT, () => {
   console.log(`
