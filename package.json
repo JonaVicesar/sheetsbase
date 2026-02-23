@@ -1,0 +1,11 @@
+{
+  "name": "sheetsbase-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/server",
+    "examples/coffee-shop"
+  ],
+  "scripts": {
+    "start:example": "cd examples/coffee-shop && npm start"
+  }
+}
