@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Coffee Shop Dashboard - SheetsBase Demo</title>
   <style>
-    /* (Mantén todos los estilos igual que antes) */
     * {
       margin: 0;
       padding: 0;
@@ -329,6 +328,155 @@
     .modal-actions .btn-primary:hover {
       background: #1a202c;
     }
+
+    /* ── DELETE / EDIT BUTTONS ── */
+    .row-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .btn-icon {
+      width: 30px;
+      height: 30px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+
+    .btn-edit {
+      background: #ebf8ff;
+      color: #2b6cb0;
+    }
+    .btn-edit:hover { background: #bee3f8; transform: scale(1.1); }
+
+    .btn-delete {
+      background: #fff5f5;
+      color: #c53030;
+    }
+    .btn-delete:hover { background: #fed7d7; transform: scale(1.1); }
+
+    .btn-status {
+      background: #f0fff4;
+      color: #276749;
+      font-size: 11px;
+      width: auto;
+      padding: 0 8px;
+      white-space: nowrap;
+    }
+    .btn-status:hover { background: #c6f6d5; transform: scale(1.02); }
+
+    /* ── CONFIRM MODAL ── */
+    .confirm-modal .modal-content {
+      max-width: 380px;
+      text-align: center;
+    }
+    .confirm-modal .confirm-icon {
+      font-size: 48px;
+      margin-bottom: 12px;
+    }
+    .confirm-modal h3 { margin-bottom: 8px; }
+    .confirm-modal p {
+      color: #718096;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+    .btn-danger {
+      background: #c53030 !important;
+      color: white !important;
+    }
+    .btn-danger:hover { background: #9b2c2c !important; }
+
+    /* ── EDIT MODAL ── */
+    .edit-section-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #718096;
+      margin: 16px 0 8px;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 16px;
+    }
+
+    /* ── ORDER CARD updated ── */
+    .order-card {
+      grid-template-columns: auto 1fr auto auto auto !important;
+    }
+
+    /* ── PRODUCT CARD updated ── */
+    .product-card {
+      position: relative;
+    }
+    .product-card-actions {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .product-card:hover .product-card-actions { opacity: 1; }
+
+    /* ── UPDATE BUTTON ── */
+    .action-btn.danger {
+      border-color: #c53030;
+      color: #c53030;
+    }
+    .action-btn.danger:hover {
+      background: #c53030;
+      color: white;
+    }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      color: white;
+      z-index: 9999;
+      transform: translateY(80px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(.175,.885,.32,1.275);
+      max-width: 320px;
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { background: #276749; }
+    .toast.error   { background: #c53030; }
+    .toast.info    { background: #2b6cb0; }
+
+    /* ── STATUS FLOW ARROWS ── */
+    .status-flow {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .status-step {
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 2px solid transparent;
+    }
+    .status-step:hover { transform: scale(1.05); }
+    .status-step.current { border-color: #2d3748; }
+    .status-arrow { color: #cbd5e0; font-size: 12px; }
+
   </style>
 </head>
 <body>
@@ -375,6 +523,9 @@
         </button>
         <button class="action-btn" onclick="clearCache()">
           🗑️ Clear Cache
+        </button>
+        <button class="action-btn danger" onclick="showBulkDeleteModal()">
+          ⚠️ Delete Old Orders
         </button>
         <button class="action-btn" onclick="loadData()">
           🔄 Reload All
@@ -489,6 +640,77 @@
     </div>
   </div>
 
+  <!-- Toast notification -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Confirm delete modal -->
+  <div id="confirmModal" class="modal confirm-modal" style="display:none;">
+    <div class="modal-content">
+      <div class="confirm-icon">🗑️</div>
+      <h3 id="confirmTitle">Delete record?</h3>
+      <p id="confirmDesc">This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button type="button" onclick="closeModal('confirmModal')">Cancel</button>
+        <button type="button" class="btn-primary btn-danger" id="confirmBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Order Modal -->
+  <div id="editOrderModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <h3>✏️ Edit Order</h3>
+      <form id="editOrderForm">
+        <input type="hidden" id="editOrderId">
+        <label>Status:</label>
+        <select id="editOrderStatus">
+          <option value="pending">Pending</option>
+          <option value="preparing">Preparing</option>
+          <option value="ready">Ready</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+        <label>Payment Method:</label>
+        <select id="editOrderPayment">
+          <option value="cash">Cash</option>
+          <option value="card">Card</option>
+          <option value="transfer">Transfer</option>
+        </select>
+        <label>Notes:</label>
+        <input type="text" id="editOrderNotes" placeholder="Notes...">
+        <div class="modal-actions">
+          <button type="button" onclick="closeModal('editOrderModal')">Cancel</button>
+          <button type="submit" class="btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Product Modal -->
+  <div id="editProductModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <h3>✏️ Edit Product</h3>
+      <form id="editProductForm">
+        <input type="hidden" id="editProductId">
+        <label>Name:</label>
+        <input type="text" id="editProductName" required>
+        <label>Price (₲):</label>
+        <input type="number" id="editProductPrice" min="0" required>
+        <label>Preparation time (min):</label>
+        <input type="number" id="editProductTime" min="1" required>
+        <label>Available:</label>
+        <select id="editProductAvailable">
+          <option value="TRUE">Yes ✅</option>
+          <option value="FALSE">No ❌</option>
+        </select>
+        <div class="modal-actions">
+          <button type="button" onclick="closeModal('editProductModal')">Cancel</button>
+          <button type="submit" class="btn-primary">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     const API_URL = 'http://localhost:3000'
 
@@ -502,7 +724,7 @@
       if (!response.ok) throw new Error(`Error: ${response.statusText}`)
       return await response.json()
     }
-
+ 
     async function insert(table, data) {
       const response = await fetch(`${API_URL}/api/insert`, {
         method: 'POST',
@@ -512,6 +734,47 @@
       
       if (!response.ok) throw new Error(`Error: ${response.statusText}`)
       return await response.json()
+    }
+
+    async function update(table, id, data) {
+      const response = await fetch(`${API_URL}/api/update`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table, id, data })
+      })
+      if (!response.ok) throw new Error(`Error: ${response.statusText}`)
+      return await response.json()
+    }
+
+    async function deleteRecord(table, id) {
+      const response = await fetch(`${API_URL}/api/delete`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ table, id })
+      })
+      if (!response.ok) throw new Error(`Error: ${response.statusText}`)
+      return await response.json()
+    }
+
+    // ── TOAST ──
+    function showToast(msg, type = 'success') {
+      const t = document.getElementById('toast')
+      t.textContent = msg
+      t.className = `toast ${type} show`
+      clearTimeout(t._timer)
+      t._timer = setTimeout(() => t.classList.remove('show'), 3000)
+    }
+
+    // ── CONFIRM DELETE ──
+    function confirmDelete(title, desc, onConfirm) {
+      document.getElementById('confirmTitle').textContent = title
+      document.getElementById('confirmDesc').textContent = desc
+      document.getElementById('confirmModal').style.display = 'flex'
+      const btn = document.getElementById('confirmBtn')
+      btn.onclick = async () => {
+        closeModal('confirmModal')
+        await onConfirm()
+      }
     }
 
     async function loadMenu() {
@@ -529,8 +792,20 @@
           return
         }
 
+        // store for later use
+        window._allProducts = result.data
+
         menu.innerHTML = availableProducts.map(product => `
           <div class="product-card">
+            <div class="product-card-actions">
+              <button class="btn-icon btn-edit"
+                data-id="${product.id}"
+                onclick="showEditProductModal(this.dataset.id)" title="Edit">✏️</button>
+              <button class="btn-icon btn-delete"
+                data-id="${product.id}"
+                data-name="${product.name}"
+                onclick="handleDeleteProduct(this.dataset.id, this.dataset.name)" title="Delete">🗑️</button>
+            </div>
             <div class="product-name">${product.name}</div>
             <div class="product-price">₲${parseInt(product.price).toLocaleString()}</div>
             <div class="product-time">⏱️ ${product.preparation_time} min</div>
@@ -642,10 +917,21 @@
           
           return `
             <div class="order-card">
-              <div class="order-id">#${order.id}</div>
+              <div class="order-id">#${order.id.toString().slice(-6)}</div>
               <div class="order-customer">${customerName}</div>
               <div class="status-badge status-${order.status ? order.status.toLowerCase() : 'pending'}">${order.status || 'pending'}</div>
               <div class="order-total">₲${orderTotal}</div>
+              <div class="row-actions">
+                <button class="btn-icon btn-edit"
+                  data-id="${order.id}"
+                  data-status="${order.status || 'pending'}"
+                  data-payment="${order.payment_method || 'cash'}"
+                  data-notes="${(order.notes || '').replace(/"/g, '&quot;')}"
+                  onclick="showEditOrderModalFromBtn(this)" title="Edit">✏️</button>
+                <button class="btn-icon btn-delete"
+                  data-id="${order.id}"
+                  onclick="handleDeleteOrder(this.dataset.id)" title="Delete">🗑️</button>
+              </div>
             </div>
           `
         }).join('')
@@ -842,6 +1128,126 @@
         showError('Error registering customer: ' + error.message)
       }
     })
+
+    // ── PRODUCT HANDLERS ──
+    function showEditProductModal(id) {
+      const product = (window._allProducts || []).find(p => p.id === id)
+      if (!product) return showToast('Product not found', 'error')
+      document.getElementById('editProductId').value = product.id
+      document.getElementById('editProductName').value = product.name
+      document.getElementById('editProductPrice').value = product.price
+      document.getElementById('editProductTime').value = product.preparation_time
+      document.getElementById('editProductAvailable').value =
+        (product.available || 'true').toUpperCase() === 'TRUE' ? 'TRUE' : 'FALSE'
+      document.getElementById('editProductModal').style.display = 'flex'
+    }
+
+    async function handleDeleteProduct(id, name) {
+      confirmDelete(
+        `Delete "${name}"?`,
+        'This product will be removed from the menu permanently.',
+        async () => {
+          try {
+            await deleteRecord('products', id)
+            showToast(`"${name}" deleted`, 'success')
+            loadData()
+          } catch (e) { showToast('Error: ' + e.message, 'error') }
+        }
+      )
+    }
+
+    document.getElementById('editProductForm').addEventListener('submit', async (e) => {
+      e.preventDefault()
+      try {
+        const id = document.getElementById('editProductId').value
+        await update('products', id, {
+          name: document.getElementById('editProductName').value,
+          price: document.getElementById('editProductPrice').value,
+          preparation_time: document.getElementById('editProductTime').value,
+          available: document.getElementById('editProductAvailable').value
+        })
+        showToast('Product updated ✓', 'success')
+        closeModal('editProductModal')
+        loadData()
+      } catch (e) { showToast('Error: ' + e.message, 'error') }
+    })
+
+    // ── ORDER HANDLERS ──
+    function showEditOrderModalFromBtn(btn) {
+      showEditOrderModal(
+        btn.dataset.id,
+        btn.dataset.status,
+        btn.dataset.payment,
+        btn.dataset.notes
+      )
+    }
+
+    function showEditOrderModal(id, status, payment, notes) {
+      document.getElementById('editOrderId').value = id
+      document.getElementById('editOrderStatus').value = status
+      document.getElementById('editOrderPayment').value = payment
+      document.getElementById('editOrderNotes').value = notes
+      document.getElementById('editOrderModal').style.display = 'flex'
+    }
+
+    async function handleDeleteOrder(id) {
+      confirmDelete(
+        `Delete order #${id.slice(-6)}?`,
+        'This order and its data will be removed permanently.',
+        async () => {
+          try {
+            await deleteRecord('orders', id)
+            showToast('Order deleted', 'success')
+            loadData()
+          } catch (e) { showToast('Error: ' + e.message, 'error') }
+        }
+      )
+    }
+
+    document.getElementById('editOrderForm').addEventListener('submit', async (e) => {
+      e.preventDefault()
+      try {
+        const id = document.getElementById('editOrderId').value
+        await update('orders', id, {
+          status: document.getElementById('editOrderStatus').value,
+          payment_method: document.getElementById('editOrderPayment').value,
+          notes: document.getElementById('editOrderNotes').value
+        })
+        showToast('Order updated ✓', 'success')
+        closeModal('editOrderModal')
+        loadData()
+      } catch (e) { showToast('Error: ' + e.message, 'error') }
+    })
+
+    // ── BULK DELETE OLD ORDERS ──
+    async function showBulkDeleteModal() {
+      const result = await query('orders')
+      const today = new Date().toISOString().split('T')[0]
+      const old = result.data.filter(o => {
+        const d = (o.order_date || '').split(' ')[0].split('T')[0]
+        return d && d < today && o.status === 'completed'
+      })
+      if (old.length === 0) {
+        showToast('No completed past orders to delete', 'info')
+        return
+      }
+      confirmDelete(
+        `Delete ${old.length} old completed orders?`,
+        'All completed orders from previous days will be deleted.',
+        async () => {
+          let deleted = 0
+          for (const o of old) {
+            try { await deleteRecord('orders', o.id); deleted++ } catch {}
+          }
+          showToast(`${deleted} orders deleted`, 'success')
+          loadData()
+        }
+      )
+    }
+
+    // ── REPLACE showSuccess/showError with toast ──
+    function showSuccess(msg) { showToast(msg, 'success') }
+    function showError(msg)   { showToast(msg, 'error') }
 
     // Initial load
     loadData()
