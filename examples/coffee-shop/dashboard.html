@@ -700,8 +700,8 @@
         <input type="number" id="editProductTime" min="1" required>
         <label>Available:</label>
         <select id="editProductAvailable">
-          <option value="TRUE">Yes ✅</option>
-          <option value="FALSE">No ❌</option>
+          <option value="TRUE">Yes </option>
+          <option value="FALSE">No </option>
         </select>
         <div class="modal-actions">
           <button type="button" onclick="closeModal('editProductModal')">Cancel</button>
@@ -712,7 +712,7 @@
   </div>
 
   <script>
-    const API_URL = 'http://localhost:3000'
+    const API_URL = window.location.origin
 
     async function query(table, filters = [], select = '*') {
       const response = await fetch(`${API_URL}/api/query`, {
