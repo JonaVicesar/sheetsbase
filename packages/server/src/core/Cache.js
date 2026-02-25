@@ -114,7 +114,7 @@ class CacheManager {
   }
 
   /**
-   * Limpia todo el cache
+   * Limpia TODO el cache
    */
   invalidateAll() {
     if (!this.enabled) {
@@ -127,6 +127,24 @@ class CacheManager {
     console.log(`Cache completamente limpiado (${keyCount} keys)`)
   }
 
+
+  /**
+   * Obtiene estadisticas del cache
+   * @returns {Object} - Estadisticas
+   */
+  getStats() {
+    const keys = this.cache.keys()
+    const total = this.stats.hits + this.stats.misses
+    const hitRate = total > 0 ? ((this.stats.hits / total) * 100).toFixed(2) : 0
+
+    return {
+      ...this.stats,
+      totalRequests: total,
+      hitRate: `${hitRate}%`,
+      currentKeys: keys.length,
+      keys: keys
+    }
+  }
 
 }
 
