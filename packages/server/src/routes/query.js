@@ -243,4 +243,39 @@ router.delete('/delete', async (req, res) => {
   }
 })
 
+// ruta para obtener estadísticas del cache
+router.get('/cache/stats', (req, res) => {
+  try {
+    const cacheManager = req.app.locals.cacheManager
+    if (!cacheManager) {
+      return res.status(503).json({ error: 'Cache no disponible' })
+    }
+    const stats = cacheManager.getStats()
+    res.json({ success: true, stats })
+  } catch (error) {
+    console.error('Error obteniendo stats:', error)
+    res.status(500).json({ error: 'Error obteniendo estadísticas', message: error.message })
+  }
+})
+
+// ruta para limpiar el cache
+router.post('/cache/clear', (req, res) => {
+  try {
+    const cacheManager = req.app.locals.cacheManager
+    if (!cacheManager) {
+      return res.status(503).json({ error: 'Cache no disponible' })
+    }
+    const { table } = req.body
+    if (table) {
+      cacheManager.invalidate(table)
+    } else {
+      cacheManager.invalidateAll()
+    }
+    res.json({ success: true, message: table ? `Cache limpiado para: ${table}` : 'Cache completamente limpiado' })
+  } catch (error) {
+    console.error('Error limpiando cache:', error)
+    res.status(500).json({ error: 'Error limpiando cache', message: error.message })
+  }
+})
+
 export default router
