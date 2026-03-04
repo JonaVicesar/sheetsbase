@@ -1,16 +1,32 @@
 /**
- * SheetsBase Client SDK
+ * SheetsBase Client
  * Google Sheets como base de datos con una API estilo Supabase
+ *
+ * @example
+ * import { createClient } from '@sheetsbase/client'
+ *
+ * const db = createClient({
+ *   serviceAccount: './credentials.json',
+ *   spreadsheetId: 'abc123'
+ * })
+ *
+ * const products = await db
+ *   .from('products')
+ *   .eq('status', 'active')
+ *   .order('name')
+ *   .limit(10)
+ *   .execute()
  */
 
 import { SheetsBaseClient } from './SheetsBaseClient.js'
-import { QueryBuilder } from './QueryBuilder.js'
 
 /**
  * Crea una nueva instancia del cliente SheetsBase
- * @param {Object} config - Configuracion
- * @param {string} config.apiUrl - URL del servidor SheetsBase
- * @param {string} [config.apiKey] - API key opcional para autenticacion
+ * @param {Object} config - configuracion
+ * @param {string} config.serviceAccount - path al archivo credentials.json
+ * @param {string} config.spreadsheetId - ID del spreadsheet de Google
+ * @param {number} [config.cacheTtl=300] - TTL del cache en segundos
+ * @param {boolean} [config.cache=true] - habilitar o deshabilitar el cache
  * @returns {SheetsBaseClient}
  */
 export function createClient(config) {
@@ -18,4 +34,3 @@ export function createClient(config) {
 }
 
 export { SheetsBaseClient } from './SheetsBaseClient.js'
-export { QueryBuilder } from './QueryBuilder.js'
