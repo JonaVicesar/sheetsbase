@@ -141,7 +141,7 @@ export class QueryBuilder {
 
   /**
    * Ejecuta la query y devuelve los resultados
-   * Transforma el objeto query al formato que espera el servidor antes de mandarlo
+   * Transforma el objeto query al formato que espera el servidor antes de mandarlo`
    * @returns {Promise<Array>} Array de registros
    */
   async execute() {
