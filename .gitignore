@@ -8,6 +8,7 @@ yarn-error.log
 .env
 .env.local
 .env.*.local
+service-account.json
 
 # Build output
 dist/
@@ -16,7 +17,7 @@ out/
 
 # IDE and editor files
 .idea/
-.vscode/
+.vscode/    
 *.swp
 *.swo
 .DS_Store
