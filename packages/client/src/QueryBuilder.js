@@ -202,6 +202,22 @@ class QueryBuilder {
   }
 
   /**
+   * Normaliza un valor para ordenar: numeros como Number, texto como string,
+   * null/vacios/undefined se tratan como nulos
+   * @param {Object} record
+   * @param {string} field
+   * @returns {number|string|null}
+   */
+  normalizeForSort(record, field) {
+    const value = record[field]
+    if (value === null || value === undefined || value === '') {
+      return null
+    }
+    const numeric = Number(value)
+    return isNaN(numeric) ? String(value) : numeric
+  }
+
+  /**
    * Ordena los resultados
    * @param {Array} data - datos a ordenar
    * @returns {Array} datos ordenados
@@ -213,14 +229,17 @@ class QueryBuilder {
     const direction = this.query.orderDirection
 
     return [...data].sort((a, b) => {
-      const aVal = a[field]
-      const bVal = b[field]
-      const aNum = Number(aVal)
-      const bNum = Number(bVal)
+      const aVal = this.normalizeForSort(a, field)
+      const bVal = this.normalizeForSort(b, field)
 
-      let comparison = 0
-      if (!isNaN(aNum) && !isNaN(bNum)) {
-        comparison = aNum - bNum
+      // valores nulos siempre al final, en ambas direcciones
+      if (aVal === null && bVal === null) return 0
+      if (aVal === null) return 1
+      if (bVal === null) return -1
+
+      let comparison
+      if (typeof aVal === 'number' && typeof bVal === 'number') {
+        comparison = aVal - bVal
       } else {
         comparison = String(aVal).localeCompare(String(bVal))
       }

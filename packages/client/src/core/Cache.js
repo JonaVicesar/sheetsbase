@@ -9,7 +9,7 @@ class CacheManager {
     this.cache = new NodeCache({
       stdTTL: config.ttl || 300,      // 5 minutos por defecto
       checkperiod: config.checkperiod || 60, // revisar cada 60 segundos
-      useClones: false                
+      useClones: true                 // devuelve copias: el caller no puede mutar el cache
     })
 
     this.enabled = config.enabled !== false // cache siempre habilitado por defecto

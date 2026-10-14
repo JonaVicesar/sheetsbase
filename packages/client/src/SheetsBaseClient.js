@@ -11,30 +11,45 @@ export class SheetsBaseClient {
   /**
    * Crea una nueva instancia del cliente
    * @param {Object} config - configuracion
-   * @param {string} config.serviceAccount - path al archivo credentials.json
-   * @param {string} config.spreadsheetId - ID del spreadsheet de Google
+   * @param {string} [config.serviceAccount] - path al archivo credentials.json
+   *   (no requerido si se inyecta config.connector)
+   * @param {string} [config.spreadsheetId] - ID del spreadsheet de Google
+   * @param {Object} [config.connector] - conector ya construido (para tests o conectores custom)
+   * @param {Object} [config.cacheManager] - CacheManager ya construido (compartir cache entre clientes)
    * @param {number} [config.cacheTtl=300] - TTL del cache en segundos
    * @param {boolean} [config.cache=true] - habilitar o deshabilitar el cache
    */
   constructor(config) {
-    if (!config || !config.serviceAccount) {
-      throw new Error('Se requiere config.serviceAccount')
-    }
-    if (!config.spreadsheetId) {
-      throw new Error('Se requiere config.spreadsheetId')
+    if (!config) {
+      throw new Error('Se requiere un objeto de configuracion')
     }
 
-    // inicializar conector con Google Sheets
-    this.connector = new SheetsConnector(config.serviceAccount, config.spreadsheetId)
+    // permitir inyectar un conector ya construido (tests)
+    if (config.connector) {
+      this.connector = config.connector
+    } else {
+      if (!config.serviceAccount) {
+        throw new Error('Se requiere config.serviceAccount (o config.connector)')
+      }
+      if (!config.spreadsheetId) {
+        throw new Error('Se requiere config.spreadsheetId')
+      }
 
-    // inicializar cache
-    this.cache = new CacheManager({
-      ttl: config.cacheTtl || 300,
-      enabled: config.cache !== false
-    })
+      // inicializar conector con Google Sheets
+      this.connector = new SheetsConnector(config.serviceAccount, config.spreadsheetId)
+    }
+
+    // inicializar cache (o usar uno inyectado)
+    if (config.cacheManager) {
+      this.cache = config.cacheManager
+    } else {
+      this.cache = new CacheManager({
+        ttl: config.cacheTtl || 300,
+        enabled: config.cache !== false
+      })
+    }
 
     console.log('SheetsBase Client inicializado')
-    console.log(`   Spreadsheet: ${config.spreadsheetId}`)
   }
 
   /**
@@ -51,24 +66,16 @@ export class SheetsBaseClient {
    * @param {string} table - nombre de la tabla
    * @param {Object|Object[]} data - registro o array de registros
    * @param {Object} [options] - opciones adicionales
-   * @param {Object} [options.idConfig] - configuracion del ID: { type: 'uuid'|'short'|'timestamp'|'readable', prefix: 'item' }
-   * @returns {Promise<Object>} registro insertado con ID generado
+   * @param {Object} [options.idConfig] - configuracion del ID:
+   *   { type: 'uuid'|'short'|'timestamp'|'readable', prefix: 'item', checkUniqueness: false }
+   * @returns {Promise<Object>} registro insertado (o resumen con insertedIds si es array)
    */
   async insert(table, data, options = {}) {
     console.log(`Insertando en '${table}'`)
 
-    // si es un array, insertar cada registro por separado
+    // si es un array, insertar todos los registros en una sola llamada
     if (Array.isArray(data)) {
-      const results = []
-      for (const record of data) {
-        const result = await this._insertOne(table, record, options)
-        results.push(result)
-      }
-      return {
-        success: true,
-        count: results.length,
-        insertedIds: results.map(r => r.data.id)
-      }
+      return this._insertMany(table, data, options)
     }
 
     return this._insertOne(table, data, options)
@@ -86,7 +93,7 @@ export class SheetsBaseClient {
 
     // buscar el registro
     const allRecords = await this.connector.readSheet(table)
-    const recordIndex = allRecords.findIndex(record => record.id == id)
+    const recordIndex = allRecords.findIndex(record => String(record.id) === String(id))
 
     if (recordIndex === -1) {
       throw new Error(`No se encontro un registro con id=${id}`)
@@ -119,7 +126,7 @@ export class SheetsBaseClient {
 
     // buscar el registro
     const allRecords = await this.connector.readSheet(table)
-    const recordIndex = allRecords.findIndex(record => record.id == id)
+    const recordIndex = allRecords.findIndex(record => String(record.id) === String(id))
 
     if (recordIndex === -1) {
       throw new Error(`No se encontro un registro con id=${id}`)
@@ -157,6 +164,20 @@ export class SheetsBaseClient {
   // ─── metodos internos ────────────────────────────────────────────────────
 
   /**
+   * Normaliza las opciones de ID
+   * @param {Object} options - opciones pasadas a insert()
+   * @returns {{type: string, prefix: string, checkUniqueness: boolean}}
+   */
+  _idOptions(options = {}) {
+    return {
+      type: options.idConfig?.type || 'uuid',
+      prefix: options.idConfig?.prefix || 'item',
+      // por defecto no se lee la hoja para verificar unicidad (los IDs son seguros sin eso)
+      checkUniqueness: options.idConfig?.checkUniqueness === true
+    }
+  }
+
+  /**
    * Inserta un unico registro en una tabla
    * @param {string} table - nombre de la tabla
    * @param {Object} data - datos a insertar
@@ -164,22 +185,70 @@ export class SheetsBaseClient {
    * @returns {Promise<Object>} registro insertado
    */
   async _insertOne(table, data, options = {}) {
+    const { type, prefix, checkUniqueness } = this._idOptions(options)
+
+    // copia para no mutar el objeto del caller
+    const row = { ...data }
+
     // generar ID si no tiene
-    if (!data.id) {
-      const existingRecords = await this.connector.readSheet(table)
-      const type = options.idConfig?.type || 'uuid'
-      const prefix = options.idConfig?.prefix || 'item'
-      data.id = IdGenerator.generateUniqueId(existingRecords, type, prefix)
+    if (!row.id) {
+      const existingRecords = checkUniqueness
+        ? await this.connector.readSheet(table)
+        : []
+      row.id = IdGenerator.generateUniqueId(existingRecords, type, prefix)
     }
 
     // agregar timestamp
-    if (!data.created_at) {
-      data.created_at = new Date().toISOString()
+    if (!row.created_at) {
+      row.created_at = new Date().toISOString()
     }
 
-    await this.connector.appendRow(table, data)
+    await this.connector.appendRow(table, row)
     this.cache.invalidate(table)
 
-    return { success: true, data }
+    return { success: true, data: row }
+  }
+
+  /**
+   * Inserta varios registros en una sola llamada al conector
+   * @param {string} table - nombre de la tabla
+   * @param {Object[]} records - registros a insertar
+   * @param {Object} options - opciones
+   * @returns {Promise<Object>} resumen con los IDs insertados
+   */
+  async _insertMany(table, records, options = {}) {
+    const { type, prefix, checkUniqueness } = this._idOptions(options)
+
+    // una sola lectura de la hoja, y solo si algun registro necesita ID verificado
+    const needsGeneratedId = records.some(record => !record.id)
+    const existingRecords = (checkUniqueness && needsGeneratedId)
+      ? await this.connector.readSheet(table)
+      : []
+
+    const rows = []
+    for (const record of records) {
+      const row = { ...record }
+
+      if (!row.id) {
+        row.id = IdGenerator.generateUniqueId(existingRecords, type, prefix)
+        // evita colisiones entre los registros del mismo batch
+        existingRecords.push(row)
+      }
+
+      if (!row.created_at) {
+        row.created_at = new Date().toISOString()
+      }
+
+      rows.push(row)
+    }
+
+    await this.connector.appendRows(table, rows)
+    this.cache.invalidate(table)
+
+    return {
+      success: true,
+      count: rows.length,
+      insertedIds: rows.map(r => r.id)
+    }
   }
 }
