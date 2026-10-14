@@ -1,52 +1,34 @@
 import NodeCache from 'node-cache'
+
 /**
- * Maneja el cache en memoria para queries, reduce el tiempo de respuesta
+ * In-memory cache for query results, keyed by `table:query`.
  */
 class CacheManager {
   constructor(config = {}) {
-    // TTL = Time To Live (tiempo de vida del cache)
-    // stdTTL: 300 = 5 minutos por defecto
     this.cache = new NodeCache({
-      stdTTL: config.ttl || 300,      // 5 minutos por defecto
-      checkperiod: config.checkperiod || 60, // revisar cada 60 segundos
-      useClones: true                 // devuelve copias: el caller no puede mutar el cache
+      stdTTL: config.ttl || 300,      // 5 minutes by default
+      checkperiod: config.checkperiod || 60, // sweep interval in seconds
+      useClones: true                 // get/set return copies: callers cannot mutate the cache
     })
 
-    this.enabled = config.enabled !== false // cache siempre habilitado por defecto
+    this.enabled = config.enabled !== false // enabled by default
     this.stats = {
-      hits: 0,      // veces que se encuentra datos en cache
-      misses: 0,    // veces que no se encuentra datos en cache
-      sets: 0,      // veces que se guarda cache
-      deletes: 0    // veces que se elimino el cache
+      hits: 0,     // reads served from cache
+      misses: 0,   // reads that fell through
+      sets: 0,     // entries stored
+      deletes: 0   // entries removed
     }
 
-    console.log('Cache Manager iniciado')
+    console.log('Cache manager initialized')
     console.log(`   TTL: ${config.ttl || 300}s`)
     console.log(`   Enabled: ${this.enabled}`)
   }
 
-
-  /**
-   * Genera una key unica para cada query
-   * @param {string} table - nombre de la tabla
-   * @param {Object} query - Objeto de query
-   * @returns {string} - Key unica
-   */
   generateKey(table, query = {}) {
-    // Convertir query a un string ordenado 
     const queryString = JSON.stringify(query, Object.keys(query).sort())
-    
-    // formato: "table:query"
-    const key = `${table}:${queryString}`
-    
-    return key
+    return `${table}:${queryString}`
   }
 
-  /**
-   * Obtiene datos del cache
-   * @param {string} key - Key del cache
-   * @returns {*} - Datos cacheados o undefined
-   */
   get(key) {
     if (!this.enabled) {
       return undefined
@@ -65,20 +47,13 @@ class CacheManager {
     return value
   }
 
-  /**
-   * Guarda datos en el cache
-   * @param {string} key - Key del cache
-   * @param {*} value - Valor a guardar
-   * @param {number} ttl - Tiempo de vida 
-   * @returns {boolean} - true si se guarda correctamente
-   */
   set(key, value, ttl) {
     if (!this.enabled) {
       return false
     }
 
     const success = this.cache.set(key, value, ttl)
-    
+
     if (success) {
       this.stats.sets++
       console.log(`Cache SET: ${key} (TTL: ${ttl || 'default'}s)`)
@@ -87,35 +62,22 @@ class CacheManager {
     return success
   }
 
-
-  /**
-   * Elimina todas las keys relacionadas con una tabla
-   * @param {string} table - Nombre de la tabla
-   */
   invalidate(table) {
     if (!this.enabled) {
       return
     }
 
-    // Obtener todas las keys del cache
-    const keys = this.cache.keys()
+    const keysToDelete = this.cache.keys().filter(key => key.startsWith(`${table}:`))
 
-    // Filtrar las que empiezan con el nombre de la tabla
-    const keysToDelete = keys.filter(key => key.startsWith(`${table}:`))
-
-    // Eliminar cada una
     keysToDelete.forEach(key => {
       this.cache.del(key)
       this.stats.deletes++
-      console.log(`🗑️  Cache DELETE: ${key}`)
+      console.log(`Cache DELETE: ${key}`)
     })
 
-    console.log(`Cache invalidado para tabla: ${table} (${keysToDelete.length} keys)`)
+    console.log(`Cache invalidated for table: ${table} (${keysToDelete.length} keys)`)
   }
 
-  /**
-   * Limpia TODO el cache
-   */
   invalidateAll() {
     if (!this.enabled) {
       return
@@ -123,17 +85,11 @@ class CacheManager {
 
     const keyCount = this.cache.keys().length
     this.cache.flushAll()
-    
-    console.log(`Cache completamente limpiado (${keyCount} keys)`)
+
+    console.log(`Cache fully cleared (${keyCount} keys)`)
   }
 
-
-  /**
-   * Obtiene estadisticas del cache
-   * @returns {Object} - Estadisticas
-   */
   getStats() {
-    const keys = this.cache.keys()
     const total = this.stats.hits + this.stats.misses
     const hitRate = total > 0 ? ((this.stats.hits / total) * 100).toFixed(2) : 0
 
@@ -141,11 +97,10 @@ class CacheManager {
       ...this.stats,
       totalRequests: total,
       hitRate: `${hitRate}%`,
-      currentKeys: keys.length,
-      keys: keys
+      currentKeys: this.cache.keys().length,
+      keys: this.cache.keys()
     }
   }
-
 }
 
 export default CacheManager

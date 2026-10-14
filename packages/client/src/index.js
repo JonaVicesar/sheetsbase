@@ -1,6 +1,5 @@
 /**
- * SheetsBase Client
- * Google Sheets como base de datos con una API estilo Supabase
+ * SheetsBase — use Google Sheets as a database with a Supabase-like API.
  *
  * @example
  * import { createClient } from '@sheetsbase/client'
@@ -21,12 +20,8 @@
 import { SheetsBaseClient } from './SheetsBaseClient.js'
 
 /**
- * Crea una nueva instancia del cliente SheetsBase
- * @param {Object} config - configuracion
- * @param {string} config.serviceAccount - path al archivo credentials.json
- * @param {string} config.spreadsheetId - ID del spreadsheet de Google
- * @param {number} [config.cacheTtl=300] - TTL del cache en segundos
- * @param {boolean} [config.cache=true] - habilitar o deshabilitar el cache
+ * Creates a SheetsBase client. Config options: see `SheetsBaseClient`.
+ * @param {Object} config
  * @returns {SheetsBaseClient}
  */
 export function createClient(config) {

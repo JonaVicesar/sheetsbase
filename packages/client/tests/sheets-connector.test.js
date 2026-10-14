@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import SheetsConnector from '../src/core/SheetsConnector.js'
 
-// cliente falso de google sheets: registra las llamadas y devuelve respuestas programadas
+// fake Google Sheets client: records calls and returns programmed responses
 function createFakeGoogleSheets() {
   const calls = {
     valuesGet: [],
@@ -62,19 +62,19 @@ function createFakeGoogleSheets() {
 }
 
 function createConnector(fakeSheets) {
-  // se inyecta el cliente falso; no se lee ningun archivo de credenciales
+  // the fake client is injected; no credentials file is read
   return new SheetsConnector(null, 'spreadsheet-123', { sheets: fakeSheets })
 }
 
-test('el constructor exige spreadsheetId', () => {
+test('the constructor requires spreadsheetId', () => {
   assert.throws(() => new SheetsConnector(null, null, { sheets: {} }), /spreadsheetId/)
 })
 
-test('el constructor exige serviceAccountPath si no se inyecta un cliente', () => {
+test('the constructor requires serviceAccountPath when no client is injected', () => {
   assert.throws(() => new SheetsConnector(null, 'spreadsheet-123'), /serviceAccountPath/)
 })
 
-test('readSheet mapea filas a objetos y usa null para celdas vacias', async () => {
+test('readSheet maps rows to objects and uses null for empty cells', async () => {
   const { fake } = createFakeGoogleSheets()
   const connector = createConnector(fake)
 
@@ -86,7 +86,7 @@ test('readSheet mapea filas a objetos y usa null para celdas vacias', async () =
   ])
 })
 
-test('readSheet devuelve array vacio si la hoja no tiene datos', async () => {
+test('readSheet returns an empty array when the sheet has no data', async () => {
   const { fake, setValues } = createFakeGoogleSheets()
   setValues([])
   const connector = createConnector(fake)
@@ -94,7 +94,7 @@ test('readSheet devuelve array vacio si la hoja no tiene datos', async () => {
   assert.deepEqual(await connector.readSheet('products'), [])
 })
 
-test('readSheet usa el rango segun la cantidad real de columnas', async () => {
+test('readSheet uses a range based on the real column count', async () => {
   const { fake, calls, setHeaders, setValues } = createFakeGoogleSheets()
   setHeaders(Array.from({ length: 30 }, (_, i) => `col${i}`))
   setValues([Array.from({ length: 30 }, (_, i) => `col${i}`), Array.from({ length: 30 }, (_, i) => String(i))])
@@ -102,13 +102,13 @@ test('readSheet usa el rango segun la cantidad real de columnas', async () => {
 
   const records = await connector.readSheet('products')
 
-  // 30 columnas => rango A:AD (ya no se limita a Z); la llamada de headers va primero
+  // 30 columns => range A:AD (no longer capped at Z); the headers call comes first
   assert.equal(calls.valuesGet[1].range, 'products!A:AD')
   assert.equal(Object.keys(records[0]).length, 30)
   assert.equal(records[0].col29, '29')
 })
 
-test('getHeaders se cachea: dos llamadas = una sola request', async () => {
+test('getHeaders is cached: two calls = one request', async () => {
   const { fake, calls } = createFakeGoogleSheets()
   const connector = createConnector(fake)
 
@@ -118,7 +118,7 @@ test('getHeaders se cachea: dos llamadas = una sola request', async () => {
   assert.equal(calls.valuesGet.length, 1)
 })
 
-test('clearCache limpia el cache de headers', async () => {
+test('clearCache drops the headers cache', async () => {
   const { fake, calls } = createFakeGoogleSheets()
   const connector = createConnector(fake)
 
@@ -129,7 +129,7 @@ test('clearCache limpia el cache de headers', async () => {
   assert.equal(calls.valuesGet.length, 2)
 })
 
-test('appendRow respeta el orden de los headers y usa el rango correcto', async () => {
+test('appendRow respects header order and uses the right range', async () => {
   const { fake, calls } = createFakeGoogleSheets()
   const connector = createConnector(fake)
 
@@ -140,7 +140,7 @@ test('appendRow respeta el orden de los headers y usa el rango correcto', async 
   assert.equal(calls.valuesAppend[0].valueInputOption, 'RAW')
 })
 
-test('appendRows envia todas las filas en una sola llamada', async () => {
+test('appendRows sends every row in a single call', async () => {
   const { fake, calls } = createFakeGoogleSheets()
   const connector = createConnector(fake)
 
@@ -150,7 +150,7 @@ test('appendRows envia todas las filas en una sola llamada', async () => {
     { id: '12', name: 'C', price: '3' }
   ])
 
-  assert.equal(calls.valuesAppend.length, 1, 'una sola llamada a la API')
+  assert.equal(calls.valuesAppend.length, 1, 'a single API call')
   assert.deepEqual(calls.valuesAppend[0].resource.values, [
     ['10', 'A', '1'],
     ['11', 'B', ''],
@@ -158,7 +158,7 @@ test('appendRows envia todas las filas en una sola llamada', async () => {
   ])
 })
 
-test('updateRow escribe la fila indicada con los valores mapeados', async () => {
+test('updateRow writes the given row with mapped values', async () => {
   const { fake, calls } = createFakeGoogleSheets()
   const connector = createConnector(fake)
 
@@ -168,7 +168,7 @@ test('updateRow escribe la fila indicada con los valores mapeados', async () => 
   assert.deepEqual(calls.valuesUpdate[0].resource.values, [['2', '', '30']])
 })
 
-test('deleteRow borra la fila con batchUpdate deleteDimension', async () => {
+test('deleteRow removes the row via batchUpdate deleteDimension', async () => {
   const { fake, calls } = createFakeGoogleSheets()
   const connector = createConnector(fake)
 
@@ -184,17 +184,17 @@ test('deleteRow borra la fila con batchUpdate deleteDimension', async () => {
   })
 })
 
-test('getSheetId busca el ID por nombre y lo cachea', async () => {
+test('getSheetId looks up the id by name and caches it', async () => {
   const { fake, calls } = createFakeGoogleSheets()
   const connector = createConnector(fake)
 
   assert.equal(await connector.getSheetId('products'), 42)
-  await connector.getSheetId('products') // segunda vez desde cache
+  await connector.getSheetId('products') // second time comes from cache
 
   assert.equal(calls.spreadsheetsGet.length, 1)
 })
 
-test('getSheetId lanza error si la hoja no existe', async () => {
+test('getSheetId throws when the sheet does not exist', async () => {
   const { fake } = createFakeGoogleSheets()
   const connector = createConnector(fake)
 

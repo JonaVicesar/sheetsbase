@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { createClient } from '../src/index.js'
 import CacheManager from '../src/core/Cache.js'
 
-// conector falso con coreografia: registra llamadas y responde datos en memoria
+// fake connector: records calls and answers from memory
 function createFakeConnector() {
   const calls = []
   let records = [
@@ -44,24 +44,24 @@ function createDb() {
   return { db, connector, cache }
 }
 
-test('createClient exige configuracion', () => {
-  assert.throws(() => createClient(), /configuracion/)
+test('createClient requires config', () => {
+  assert.throws(() => createClient(), /config object/)
   assert.throws(() => createClient({}), /serviceAccount/)
   assert.throws(() => createClient({ spreadsheetId: 'x' }), /serviceAccount/)
 })
 
-test('createClient acepta un conector inyectado sin credenciales', () => {
+test('createClient accepts an injected connector without credentials', () => {
   const db = createClient({ connector: createFakeConnector() })
   assert.ok(db.from('products'))
 })
 
-test('from() devuelve un QueryBuilder encadenable', async () => {
+test('from() returns a chainable QueryBuilder', async () => {
   const { db } = createDb()
   const result = await db.from('products').eq('name', 'Mouse').execute()
   assert.deepEqual(result.map(r => r.name), ['Mouse'])
 })
 
-test('insert genera id y created_at, y llama appendRow', async () => {
+test('insert generates id and created_at and calls appendRow', async () => {
   const { db, connector } = createDb()
   const before = Date.now()
 
@@ -78,7 +78,7 @@ test('insert genera id y created_at, y llama appendRow', async () => {
   assert.equal(payload.name, 'Keyboard')
 })
 
-test('insert respeta un id provisto por el usuario', async () => {
+test('insert respects a user-supplied id', async () => {
   const { db, connector } = createDb()
   const result = await db.insert('products', { id: 'custom-1', name: 'Monitor' })
   assert.equal(result.data.id, 'custom-1')
@@ -86,13 +86,13 @@ test('insert respeta un id provisto por el usuario', async () => {
   assert.equal(payload.id, 'custom-1')
 })
 
-test('insert acepta idConfig con tipo short', async () => {
+test('insert accepts a short idConfig type', async () => {
   const { db } = createDb()
   const result = await db.insert('products', { name: 'Cable' }, { idConfig: { type: 'short' } })
   assert.match(result.data.id, /^[a-z0-9]{16}$/)
 })
 
-test('insert sin ID no lee la hoja por defecto', async () => {
+test('insert without an id does not read the sheet by default', async () => {
   const { db, connector } = createDb()
   await db.insert('products', { name: 'Auto' })
 
@@ -100,7 +100,7 @@ test('insert sin ID no lee la hoja por defecto', async () => {
   assert.equal(reads.length, 0, 'no debe leer la hoja si no se pide checkUniqueness')
 })
 
-test('insert con idConfig.checkUniqueness lee la hoja una vez', async () => {
+test('insert with idConfig.checkUniqueness reads the sheet once', async () => {
   const { db, connector } = createDb()
   await db.insert('products', { name: 'Verified' }, { idConfig: { checkUniqueness: true } })
 
@@ -108,7 +108,7 @@ test('insert con idConfig.checkUniqueness lee la hoja una vez', async () => {
   assert.equal(reads.length, 1)
 })
 
-test('insert de multiples registros usa un solo appendRows', async () => {
+test('array insert uses a single appendRows call', async () => {
   const { db, connector } = createDb()
   const result = await db.insert('products', [
     { name: 'A' },
@@ -127,7 +127,7 @@ test('insert de multiples registros usa un solo appendRows', async () => {
   assert.deepEqual(batches[0][2].map(r => r.name), ['A', 'B', 'C'])
 })
 
-test('insert de multiples registros genera IDs unicos entre ellos', async () => {
+test('array insert generates unique ids within the batch', async () => {
   const { db } = createDb()
   const result = await db.insert('products', [
     { name: 'X' },
@@ -138,7 +138,7 @@ test('insert de multiples registros genera IDs unicos entre ellos', async () => 
   assert.ok(result.insertedIds.every(id => id.startsWith('batch-')))
 })
 
-test('insert de multiples registros preserva IDs explicitos', async () => {
+test('array insert preserves explicit ids', async () => {
   const { db, connector } = createDb()
   const result = await db.insert('products', [
     { id: 'given-1', name: 'Given' },
@@ -151,14 +151,14 @@ test('insert de multiples registros preserva IDs explicitos', async () => {
   assert.deepEqual(batch[2].map(r => r.name), ['Given', 'Generated'])
 })
 
-test('insert de multiples registros no muta los objetos del caller', async () => {
+test('array insert does not mutate the caller objects', async () => {
   const { db } = createDb()
   const original = [{ name: 'One' }, { name: 'Two' }]
   await db.insert('products', original)
   assert.deepEqual(original, [{ name: 'One' }, { name: 'Two' }])
 })
 
-test('delete acepta id numerico aunque Sheets guarde strings', async () => {
+test('delete accepts a numeric id even though Sheets stores strings', async () => {
   const { db, connector } = createDb()
   const result = await db.delete('products', 1)
   assert.deepEqual(result, { success: true, id: 1 })
@@ -169,14 +169,14 @@ test('delete acepta id numerico aunque Sheets guarde strings', async () => {
   assert.equal(rowNumber, 2)
 })
 
-test('insert no muta el objeto original del caller', async () => {
+test('insert does not mutate the caller object', async () => {
   const { db } = createDb()
   const original = { name: 'Clean' }
   await db.insert('products', original)
   assert.deepEqual(original, { name: 'Clean' })
 })
 
-test('update encuentra la fila por id y escribe con numero de fila correcto', async () => {
+test('update finds the row by id and writes the right row number', async () => {
   const { db, connector } = createDb()
   const result = await db.update('products', '2', { price: '30' })
 
@@ -187,16 +187,16 @@ test('update encuentra la fila por id y escribe con numero de fila correcto', as
   const [method, table, rowNumber, payload] = connector.calls.at(-1)
   assert.equal(method, 'updateRow')
   assert.equal(table, 'products')
-  assert.equal(rowNumber, 3) // id '2' es el segundo registro => fila 3
+  assert.equal(rowNumber, 3) // id '2' is the second record => row 3
   assert.equal(payload.price, '30')
 })
 
-test('update lanza error si el id no existe', async () => {
+test('update throws when the id does not exist', async () => {
   const { db } = createDb()
   await assert.rejects(() => db.update('products', '999', { price: '1' }), /999/)
 })
 
-test('update acepta id numerico aunque Sheets guarde strings', async () => {
+test('update accepts a numeric id even though Sheets stores strings', async () => {
   const { db, connector } = createDb()
   const result = await db.update('products', 2, { price: '30' })
   assert.equal(result.success, true)
@@ -207,7 +207,7 @@ test('update acepta id numerico aunque Sheets guarde strings', async () => {
   assert.equal(rowNumber, 3)
 })
 
-test('delete elimina la fila del registro encontrado', async () => {
+test('delete removes the row of the found record', async () => {
   const { db, connector } = createDb()
   const result = await db.delete('products', '1')
 
@@ -219,12 +219,12 @@ test('delete elimina la fila del registro encontrado', async () => {
   assert.equal(rowNumber, 2)
 })
 
-test('delete lanza error si el id no existe', async () => {
+test('delete throws when the id does not exist', async () => {
   const { db } = createDb()
   await assert.rejects(() => db.delete('products', '999'), /999/)
 })
 
-test('las escrituras invalidan el cache de la tabla', async () => {
+test('writes invalidate the table cache', async () => {
   const { db, cache } = createDb()
 
   await db.from('products').select('*').execute()
@@ -235,7 +235,7 @@ test('las escrituras invalidan el cache de la tabla', async () => {
   assert.equal(cache.getStats().currentKeys, 0, 'la escritura debe invalidar el cache')
 })
 
-test('clearCache invalida por tabla o todo', async () => {
+test('clearCache invalidates one table or everything', async () => {
   const { db, cache } = createDb()
 
   await db.from('products').select('*').execute()
@@ -246,7 +246,7 @@ test('clearCache invalida por tabla o todo', async () => {
   assert.equal(cache.getStats().currentKeys, 0)
 })
 
-test('getCacheStats devuelve estadisticas', async () => {
+test('getCacheStats returns stats', async () => {
   const { db } = createDb()
   const stats = db.getCacheStats()
   assert.equal(typeof stats.hitRate, 'string')

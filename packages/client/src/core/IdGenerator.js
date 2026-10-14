@@ -1,11 +1,8 @@
 /**
- * Genera IDs unicos para los registros
+ * Generates unique IDs for records.
  */
 class IdGenerator {
-  /**
-   * Genera un UUID v4
-   * @returns {string}
-   */
+  /** @returns {string} a UUID v4 */
   static generateUUID() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
       const r = Math.random() * 16 | 0
@@ -14,10 +11,7 @@ class IdGenerator {
     })
   }
 
-  /**
-   * Genera un ID corto de 16 caracteres
-   * @returns {string}
-   */
+  /** @returns {string} a 16-char [a-z0-9] ID */
   static generateShortId() {
     const chars = 'abcdefghijklmnopqrstuvwxyz0123456789'
     let id = ''
@@ -27,21 +21,14 @@ class IdGenerator {
     return id
   }
 
-  /**
-   * Genera un ID con timestamp para ordenar por fecha de creacion
-   * @returns {string}
-   */
+  /** @returns {string} `timestamp_random`, sortable by creation time */
   static generateTimestampId() {
     const timestamp = Date.now()
     const random = Math.random().toString(36).substring(2, 10)
     return `${timestamp}_${random}`
   }
 
-  /**
-   * Genera un ID legible con prefijo y fecha
-   * @param {string} prefix - prefijo del ID
-   * @returns {string}
-   */
+  /** @returns {string} `prefix-YYYY-MM-DD-random` */
   static generateReadableId(prefix = 'item') {
     const date = new Date()
     const year = date.getFullYear()
@@ -51,21 +38,15 @@ class IdGenerator {
     return `${prefix}-${year}-${month}-${day}-${random}`
   }
 
-  /**
-   * Verifica si un ID ya existe en los registros
-   * @param {Array} records - registros existentes
-   * @param {string} id - ID a verificar
-   * @returns {boolean}
-   */
   static checkIdExists(records, id) {
     return records.some(record => record.id === id)
   }
 
   /**
-   * Genera un ID unico garantizado verificando que no exista
-   * @param {Array} existingRecords - registros existentes
-   * @param {string} type - tipo de ID: uuid, short, timestamp, readable
-   * @param {string} prefix - prefijo para IDs tipo readable
+   * Generates a unique ID, re-rolling until it doesn't collide with `existingRecords`.
+   * @param {Array} existingRecords
+   * @param {string} type - 'uuid' | 'short' | 'timestamp' | 'readable'
+   * @param {string} prefix - for 'readable' IDs
    * @returns {string}
    */
   static generateUniqueId(existingRecords = [], type = 'uuid', prefix = 'item') {

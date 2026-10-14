@@ -2,7 +2,7 @@ import { google } from 'googleapis'
 import fs from 'fs'
 
 /**
- * Convierte un indice de columna (1-based) a letra: 1 -> 'A', 27 -> 'AA'
+ * Converts a 1-based column index to a letter: 1 -> 'A', 27 -> 'AA'
  * @param {number} index
  * @returns {string}
  */
@@ -18,30 +18,28 @@ function columnLetter(index) {
 }
 
 /**
- * Conecta con Google Sheets
- * Esta clase es para manejar toda la comunicacion con Google Sheets
+ * Handles all communication with Google Sheets.
  */
 class SheetsConnector {
   /**
-   * @param {string} [serviceAccountPath] - path al archivo credentials.json
-   *   (no requerido si se inyecta un cliente `sheets`)
-   * @param {string} spreadsheetId - ID del spreadsheet de Google
-   * @param {Object} [options] - opciones
-   * @param {Object} [options.sheets] - cliente de sheets ya construido (para tests)
+   * @param {string} [serviceAccountPath] - path to the service-account JSON
+   *   (not required when a `sheets` client is injected)
+   * @param {string} spreadsheetId - Google spreadsheet ID
+   * @param {Object} [options]
+   * @param {Object} [options.sheets] - pre-built sheets client (tests)
    */
   constructor(serviceAccountPath, spreadsheetId, options = {}) {
     this.spreadsheetId = spreadsheetId
 
     if (!spreadsheetId) {
-      throw new Error('spreadsheetId es undefined o null')
+      throw new Error('spreadsheetId is undefined or null')
     }
 
-    // permitir inyectar un cliente ya construido (tests)
     if (options && options.sheets) {
       this.sheets = options.sheets
     } else {
       if (!serviceAccountPath) {
-        throw new Error('serviceAccountPath es undefined o null')
+        throw new Error('serviceAccountPath is undefined or null')
       }
 
       const credentials = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'))
@@ -54,17 +52,17 @@ class SheetsConnector {
       this.sheets = google.sheets({ version: 'v4', auth })
     }
 
-    // cache en memoria de headers y sheetIds (evitan llamadas repetidas a la API)
+    // memoized lookups, avoid repeated API calls
     this._headersCache = new Map()
     this._sheetIdCache = new Map()
 
-    console.log('SheetsConnector inicializado')
+    console.log('SheetsConnector initialized')
   }
 
   /**
-   * Lee todos los datos de una hoja especifica
-   * @param {string} sheetName - Nombre de la hoja
-   * @returns {Promise<Array>} Array de objetos con los datos
+   * Reads every row of a sheet as objects. Empty cells become null.
+   * @param {string} sheetName
+   * @returns {Promise<Array>}
    */
   async readSheet(sheetName) {
     try {
@@ -93,19 +91,19 @@ class SheetsConnector {
         return record
       })
 
-      console.log(`${records.length} registros leidos de '${sheetName}'`)
+      console.log(`${records.length} records read from '${sheetName}'`)
       return records
 
     } catch (error) {
-      console.error(`Error leyendo la hoja '${sheetName}':`, error.message)
+      console.error(`Error reading sheet '${sheetName}':`, error.message)
       throw error
     }
   }
 
   /**
-   * Agrega una nueva fila al final de la hoja
-   * @param {string} sheetName - Nombre de la hoja
-   * @param {Object} data - Objeto con los datos a insertar
+   * Appends one row at the end of the sheet.
+   * @param {string} sheetName
+   * @param {Object} data
    */
   async appendRow(sheetName, data) {
     try {
@@ -120,19 +118,19 @@ class SheetsConnector {
         resource: { values: [values] }
       })
 
-      console.log(`Fila agregada en '${sheetName}'`)
+      console.log(`Row appended to '${sheetName}'`)
       return response.data
 
     } catch (error) {
-      console.error(`Error agregando fila en '${sheetName}':`, error.message)
+      console.error(`Error appending row to '${sheetName}':`, error.message)
       throw error
     }
   }
 
   /**
-   * Agrega varias filas nuevas al final de la hoja en una sola llamada
-   * @param {string} sheetName - Nombre de la hoja
-   * @param {Object[]} rows - Array de objetos con los datos a insertar
+   * Appends several rows in a single API call.
+   * @param {string} sheetName
+   * @param {Object[]} rows
    */
   async appendRows(sheetName, rows) {
     try {
@@ -147,20 +145,20 @@ class SheetsConnector {
         resource: { values: values }
       })
 
-      console.log(`${values.length} filas agregadas en '${sheetName}'`)
+      console.log(`${values.length} rows appended to '${sheetName}'`)
       return response.data
 
     } catch (error) {
-      console.error(`Error agregando filas en '${sheetName}':`, error.message)
+      console.error(`Error appending rows to '${sheetName}':`, error.message)
       throw error
     }
   }
 
   /**
-   * Actualiza una fila por numero de fila
-   * @param {string} sheetName - Nombre de la hoja
-   * @param {number} rowNumber - Numero de fila (2, 3, 4...)
-   * @param {Object} data - Datos a actualizar
+   * Rewrites one row by its row number.
+   * @param {string} sheetName
+   * @param {number} rowNumber - 2, 3, 4...
+   * @param {Object} data
    */
   async updateRow(sheetName, rowNumber, data) {
     try {
@@ -175,25 +173,25 @@ class SheetsConnector {
         resource: { values: [values] }
       })
 
-      console.log(`Fila ${rowNumber} actualizada en '${sheetName}'`)
+      console.log(`Row ${rowNumber} updated in '${sheetName}'`)
       return response.data
 
     } catch (error) {
-      console.error(`Error actualizando fila:`, error.message)
+      console.error(`Error updating row:`, error.message)
       throw error
     }
   }
 
   /**
-   * Elimina una fila completa de la hoja (la fila se borra, no se vacia)
-   * @param {string} sheetName - Nombre de la hoja
-   * @param {number} rowNumber - Numero de fila (2, 3, 4...)
+   * Removes a row from the sheet entirely (rows below shift up).
+   * @param {string} sheetName
+   * @param {number} rowNumber - 2, 3, 4...
    */
   async deleteRow(sheetName, rowNumber) {
     try {
       const sheetId = await this.getSheetId(sheetName)
 
-      // deleteDimension usa indices 0-based: fila 2 => startIndex 1
+      // deleteDimension is 0-based: row 2 => startIndex 1
       await this.sheets.spreadsheets.batchUpdate({
         spreadsheetId: this.spreadsheetId,
         requestBody: {
@@ -212,18 +210,18 @@ class SheetsConnector {
         }
       })
 
-      console.log(`Fila ${rowNumber} eliminada de '${sheetName}'`)
+      console.log(`Row ${rowNumber} deleted from '${sheetName}'`)
 
     } catch (error) {
-      console.error(`Error eliminando fila:`, error.message)
+      console.error(`Error deleting row:`, error.message)
       throw error
     }
   }
 
   /**
-   * Obtiene el ID numerico de la hoja (necesario para batchUpdate)
-   * @param {string} sheetName - Nombre de la hoja
-   * @returns {Promise<number>} ID de la hoja
+   * Numeric sheet ID, needed for batchUpdate.
+   * @param {string} sheetName
+   * @returns {Promise<number>}
    */
   async getSheetId(sheetName) {
     const cached = this._sheetIdCache.get(sheetName)
@@ -241,7 +239,7 @@ class SheetsConnector {
     )
 
     if (!sheet) {
-      throw new Error(`No se encontro la hoja '${sheetName}'`)
+      throw new Error(`Sheet '${sheetName}' not found`)
     }
 
     const sheetId = sheet.properties.sheetId
@@ -250,9 +248,9 @@ class SheetsConnector {
   }
 
   /**
-   * Obtiene los headers de una hoja (con cache en memoria)
-   * @param {string} sheetName - Nombre de la hoja
-   * @returns {Promise<Array>} Array con los nombres de las columnas
+   * Row 1 of the sheet (memoized).
+   * @param {string} sheetName
+   * @returns {Promise<Array>} column names
    */
   async getHeaders(sheetName) {
     const cached = this._headersCache.get(sheetName)
@@ -271,18 +269,18 @@ class SheetsConnector {
       return headers
 
     } catch (error) {
-      console.error(`Error obteniendo headers:`, error.message)
+      console.error(`Error reading headers:`, error.message)
       throw error
     }
   }
 
   /**
-   * Limpia el cache de headers y sheetIds (util si se modifican las columnas)
+   * Drops the memoized headers and sheetIds (use when columns change).
    */
   clearCache() {
     this._headersCache.clear()
     this._sheetIdCache.clear()
-    console.log('Cache de headers limpiado')
+    console.log('Headers cache cleared')
   }
 }
 

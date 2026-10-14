@@ -6,7 +6,7 @@ function createCache() {
   return new CacheManager({ ttl: 60 })
 }
 
-test('get devuelve una copia: mutar el resultado no corrompe el cache', () => {
+test('get returns a copy: mutating the result cannot corrupt the cache', () => {
   const cache = createCache()
   const original = [{ id: '1', name: 'Laptop' }]
 
@@ -20,7 +20,7 @@ test('get devuelve una copia: mutar el resultado no corrompe el cache', () => {
   assert.deepEqual(second, [{ id: '1', name: 'Laptop' }])
 })
 
-test('set guarda una copia: mutar el input despues no altera el cache', () => {
+test('set stores a copy: mutating the input afterwards cannot change the cache', () => {
   const cache = createCache()
   const data = [{ id: '1', name: 'Laptop' }]
 
@@ -31,7 +31,7 @@ test('set guarda una copia: mutar el input despues no altera el cache', () => {
   assert.deepEqual(cache.get('key'), [{ id: '1', name: 'Laptop' }])
 })
 
-test('invalidate borra solo las keys de la tabla', () => {
+test('invalidate removes only the keys of the table', () => {
   const cache = createCache()
   cache.set('orders:a', [1])
   cache.set('orders:b', [2])
@@ -44,7 +44,7 @@ test('invalidate borra solo las keys de la tabla', () => {
   assert.deepEqual(cache.get('products:c'), [3])
 })
 
-test('getStats cuenta hits y misses', () => {
+test('getStats counts hits and misses', () => {
   const cache = createCache()
   cache.set('key', [1])
 
@@ -59,7 +59,7 @@ test('getStats cuenta hits y misses', () => {
   assert.equal(stats.hitRate, '50.00%')
 })
 
-test('cache deshabilitado no guarda ni devuelve', () => {
+test('a disabled cache neither stores nor returns', () => {
   const cache = new CacheManager({ enabled: false })
   assert.equal(cache.set('key', [1]), false)
   assert.equal(cache.get('key'), undefined)
