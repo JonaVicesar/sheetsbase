@@ -2,10 +2,12 @@
   "name": "sheetsbase-monorepo",
   "private": true,
   "workspaces": [
-    "packages/server",
+    "packages/client",
     "examples/coffee-shop"
   ],
   "scripts": {
-    "start:example": "cd examples/coffee-shop && npm start"
+    "test": "npm test --workspace @sheetsbase/client",
+    "start:example": "npm start --workspace sheetsbase-coffee-shop-example",
+    "dev:example": "npm start --workspace sheetsbase-coffee-shop-example"
   }
 }
