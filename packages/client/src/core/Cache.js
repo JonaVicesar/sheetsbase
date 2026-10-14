@@ -24,9 +24,19 @@ class CacheManager {
     console.log(`   Enabled: ${this.enabled}`)
   }
 
+  /**
+   * Canonical cache key from query semantics: filter order cannot change it,
+   * so equivalent queries share entries. Keeps the `table:` prefix used by invalidate().
+   */
   generateKey(table, query = {}) {
-    const queryString = JSON.stringify(query, Object.keys(query).sort())
-    return `${table}:${queryString}`
+    const cols = (query.columns || ['*']).join(',')
+    const filters = (query.filters || [])
+      .map(f => JSON.stringify([f.field, f.operator, f.value]))
+      .sort()
+      .join(';')
+    const order = query.orderBy ? `${query.orderBy}:${query.orderDirection}` : ''
+
+    return `${table}:${cols}|${filters}|${order}|${query.limitValue ?? ''}`
   }
 
   get(key) {
@@ -91,12 +101,12 @@ class CacheManager {
 
   getStats() {
     const total = this.stats.hits + this.stats.misses
-    const hitRate = total > 0 ? ((this.stats.hits / total) * 100).toFixed(2) : 0
+    const hitRate = total > 0 ? Number(((this.stats.hits / total) * 100).toFixed(2)) : 0
 
     return {
       ...this.stats,
       totalRequests: total,
-      hitRate: `${hitRate}%`,
+      hitRate,
       currentKeys: this.cache.keys().length,
       keys: this.cache.keys()
     }

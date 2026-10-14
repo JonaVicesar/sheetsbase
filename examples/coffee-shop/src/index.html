@@ -949,7 +949,7 @@
         
         if (result.success) {
           document.getElementById('cache-info').textContent = 
-            `Cache: ${result.stats.hits} hits, ${result.stats.misses} misses (${result.stats.hitRate} hit rate) - ${result.stats.currentKeys} keys`
+            `Cache: ${result.stats.hits} hits, ${result.stats.misses} misses (${result.stats.hitRate}% hit rate) - ${result.stats.currentKeys} keys`
         }
       } catch (error) {
         console.log('Cache stats not available')

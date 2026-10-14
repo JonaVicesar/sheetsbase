@@ -205,7 +205,7 @@ await db.delete('products', 'product-id')
 ```javascript
 // Get cache stats
 const stats = db.getCacheStats()
-console.log(stats.hitRate) // '85.00%'
+console.log(stats.hitRate) // 85 (number, 0-100)
 
 // Clear cache for a specific table
 db.clearCache('products')

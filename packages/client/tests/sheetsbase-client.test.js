@@ -249,6 +249,6 @@ test('clearCache invalidates one table or everything', async () => {
 test('getCacheStats returns stats', async () => {
   const { db } = createDb()
   const stats = db.getCacheStats()
-  assert.equal(typeof stats.hitRate, 'string')
+  assert.equal(typeof stats.hitRate, 'number')
   assert.equal(stats.totalRequests, 0)
 })
