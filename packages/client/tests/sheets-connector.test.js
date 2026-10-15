@@ -1,5 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
 import SheetsConnector from '../src/core/SheetsConnector.js'
 
 // fake Google Sheets client: records calls and returns programmed responses
@@ -72,6 +75,46 @@ test('the constructor requires spreadsheetId', () => {
 
 test('the constructor requires serviceAccountPath when no client is injected', () => {
   assert.throws(() => new SheetsConnector(null, 'spreadsheet-123'), /serviceAccountPath/)
+})
+
+const FAKE_CREDENTIALS = { client_email: 'sa@test.iam.gserviceaccount.com', private_key: 'key' }
+
+test('serviceAccount accepts a credentials object', () => {
+  const connector = new SheetsConnector(FAKE_CREDENTIALS, 'spreadsheet-123')
+  assert.deepEqual(connector.credentials, FAKE_CREDENTIALS)
+})
+
+test('serviceAccount accepts an inline JSON string', () => {
+  const connector = new SheetsConnector(JSON.stringify(FAKE_CREDENTIALS), 'spreadsheet-123')
+  assert.deepEqual(connector.credentials, FAKE_CREDENTIALS)
+})
+
+test('serviceAccount accepts an env-var name holding the JSON', () => {
+  process.env.SHEETSBASE_TEST_CREDENTIALS = JSON.stringify(FAKE_CREDENTIALS)
+  try {
+    const connector = new SheetsConnector('SHEETSBASE_TEST_CREDENTIALS', 'spreadsheet-123')
+    assert.deepEqual(connector.credentials, FAKE_CREDENTIALS)
+  } finally {
+    delete process.env.SHEETSBASE_TEST_CREDENTIALS
+  }
+})
+
+test('serviceAccount accepts a file path', () => {
+  const file = path.join(os.tmpdir(), `sheetsbase-test-sa-${process.pid}.json`)
+  fs.writeFileSync(file, JSON.stringify(FAKE_CREDENTIALS), 'utf8')
+  try {
+    const connector = new SheetsConnector(file, 'spreadsheet-123')
+    assert.deepEqual(connector.credentials, FAKE_CREDENTIALS)
+  } finally {
+    fs.unlinkSync(file)
+  }
+})
+
+test('serviceAccount throws when it cannot be resolved', () => {
+  assert.throws(
+    () => new SheetsConnector('definitely-not-a-file-or-env-var', 'spreadsheet-123'),
+    /could not be resolved/
+  )
 })
 
 test('readSheet maps rows to objects and uses null for empty cells', async () => {

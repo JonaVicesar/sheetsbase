@@ -9,7 +9,8 @@ import IdGenerator from './core/IdGenerator.js'
 export class SheetsBaseClient {
   /**
    * @param {Object} config
-   * @param {string} [config.serviceAccount] - path to the service-account JSON
+   * @param {Object|string} [config.serviceAccount] - credentials object, path to the service-account JSON,
+   *   env-var name holding the JSON, or the JSON string itself
    *   (not required when config.connector is injected)
    * @param {string} [config.spreadsheetId] - Google spreadsheet ID
    * @param {Object} [config.connector] - pre-built connector (tests or custom transports)

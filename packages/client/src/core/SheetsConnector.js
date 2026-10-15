@@ -18,12 +18,43 @@ function columnLetter(index) {
 }
 
 /**
+ * Resolves service-account credentials from an object, an inline JSON string,
+ * a file path, or the name of an env var holding the JSON.
+ * @param {Object|string} serviceAccount
+ * @returns {Object} parsed credentials
+ */
+function resolveCredentials(serviceAccount) {
+  if (serviceAccount && typeof serviceAccount === 'object') {
+    return serviceAccount
+  }
+
+  if (typeof serviceAccount !== 'string' || serviceAccount.length === 0) {
+    throw new Error('serviceAccount must be a credentials object, a file path, an env-var name, or a JSON string')
+  }
+
+  if (serviceAccount.trim().startsWith('{')) {
+    return JSON.parse(serviceAccount)
+  }
+
+  if (fs.existsSync(serviceAccount)) {
+    return JSON.parse(fs.readFileSync(serviceAccount, 'utf8'))
+  }
+
+  const fromEnv = process.env[serviceAccount]
+  if (fromEnv) {
+    return JSON.parse(fromEnv)
+  }
+
+  throw new Error(`serviceAccount could not be resolved: '${serviceAccount}' is not a credentials object, JSON, existing file, or env var`)
+}
+
+/**
  * Handles all communication with Google Sheets.
  */
 class SheetsConnector {
   /**
-   * @param {string} [serviceAccountPath] - path to the service-account JSON
-   *   (not required when a `sheets` client is injected)
+   * @param {Object|string} [serviceAccount] - credentials object, path to the service-account JSON,
+   *   env-var name holding the JSON, or the JSON string itself (not required when a `sheets` client is injected)
    * @param {string} spreadsheetId - Google spreadsheet ID
    * @param {Object} [options]
    * @param {Object} [options.sheets] - pre-built sheets client (tests)
@@ -42,10 +73,10 @@ class SheetsConnector {
         throw new Error('serviceAccountPath is undefined or null')
       }
 
-      const credentials = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'))
+      this.credentials = resolveCredentials(serviceAccountPath)
 
       const auth = new google.auth.GoogleAuth({
-        credentials: credentials,
+        credentials: this.credentials,
         scopes: ['https://www.googleapis.com/auth/spreadsheets'],
       })
 
