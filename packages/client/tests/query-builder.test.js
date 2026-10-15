@@ -1,6 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import QueryBuilder from '../src/QueryBuilder.js'
+import CacheManager from '../src/core/Cache.js'
 
 // fake connector: serves data from memory, never touches Google Sheets
 const DATASET = [
@@ -128,4 +129,18 @@ test('the cache avoids a second connector read', async () => {
   assert.equal(first.length, 3)
   assert.deepEqual(second, first)
   assert.equal(calls.length, 1, 'the connector is only read once')
+})
+
+test('filters added in a different order share the cache entry', async () => {
+  const calls = []
+  const cache = new CacheManager({ ttl: 60 })
+
+  await new QueryBuilder(createFakeConnector(calls), cache)
+    .from('products').eq('category', 'tech').gt('stock', 0).execute()
+
+  const second = await new QueryBuilder(createFakeConnector(calls), cache)
+    .from('products').gt('stock', 0).eq('category', 'tech').execute()
+
+  assert.equal(second.length, 2)
+  assert.equal(calls.length, 1, 'equivalent queries must hit the same cache entry')
 })
